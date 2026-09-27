@@ -2649,3 +2649,14 @@ La aplicación mantiene su arquitectura `React/Vite -> API Flask -> MySQL/MariaD
 - `GUNICORN_WORKERS`, `GUNICORN_THREADS` y `GUNICORN_TIMEOUT` son variables configurables. No se añadió un pool de MySQL porque el backend usa conexiones cortas cerradas por servicio y no se dispone de una medición de concurrencia que justifique cambiar esa semántica transaccional.
 - `.github/workflows/ci.yml` prepara una validación sin despliegue: MySQL 8, esquema SQL, pruebas `unittest`, pruebas Node y build Vite.
 
+## Dockerización
+
+El despliegue Docker conserva la separación de responsabilidades: `frontend` compila React con Node y sirve solo `dist/` mediante Nginx; `backend` ejecuta `wsgi:app` con Gunicorn y usuario no-root; `db` usa MySQL 8.4 en el volumen nombrado `mysql_data`.
+
+- En producción, Nginx publica únicamente `80:80`; el navegador usa `/api` en mismo origen y Nginx reenvía ese prefijo completo a `backend:8000`. MySQL no expone el puerto 3306.
+- `docker-compose.local.yml` publica `8080`, `8000` y `3307` para pruebas sin chocar con la configuración local de XAMPP. No ejecuta Vite ni `python app.py`.
+- El directorio `database/` se monta de solo lectura durante el primer arranque. `database/docker-init/00-init.sh` cambia al directorio de inicialización para que los `SOURCE database/...` de `init_database.sql` se resuelvan correctamente. La imagen oficial solo lo ejecuta en un volumen vacío.
+- Las migraciones incrementales siguen siendo explícitas y manuales mediante `scripts/docker-run-sql.sh`; no se aplican automáticamente al actualizar contenedores.
+- No se detectaron uploads, PDF, exports ni archivos generados que exijan otro volumen persistente. Los assets del juego forman parte del build estático.
+- `DOCKER_DEPLOY.md` concentra comandos de VPS, variables, HTTPS, backup, restauración, actualización y diagnóstico. Docker no estaba instalado en el equipo durante la preparación, por lo que `docker compose config`, construcción de imágenes, persistencia del volumen y pruebas funcionales dentro de contenedores deben ejecutarse en un host con Docker antes del primer despliegue.
+

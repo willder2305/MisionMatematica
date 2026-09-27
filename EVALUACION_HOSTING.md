@@ -95,6 +95,7 @@ El tamaño del build está dominado por mapas y sprites PNG. Node y `node_module
 | --- | ---: | --- |
 | Flask | `3.0.3` | API y blueprints. |
 | flask-cors | `4.0.1` | CORS restringido a `FRONTEND_URLS`. |
+| gunicorn | `26.2.0` | Servidor WSGI para Linux y contenedor backend. |
 | mysql-connector-python | `9.0.0` | Conexión directa a MySQL/MariaDB. |
 | python-dotenv | `1.0.1` | Carga local de `.env`. |
 
@@ -102,13 +103,13 @@ La versión de Python usada por el entorno virtual auditado es **Python `3.12.14
 
 ### WSGI y procesos
 
-- **Servidor WSGI configurado actualmente:** No determinado actualmente; no existe dependencia ni archivo de configuración para Gunicorn, Waitress, uWSGI o mod_wsgi.
-- **Punto de entrada disponible:** `backend/app.py` expone `app` y `crear_app()`. Un integrador WSGI puede importar `app`, pero esta integración no está documentada como configuración de despliegue en el proyecto.
-- **Arranque actual:** servidor de desarrollo Flask en `127.0.0.1:5000`.
+- **Servidor WSGI configurado actualmente:** Gunicorn `26.2.0`, mediante `backend/wsgi.py` y los archivos Docker/deploy.
+- **Punto de entrada disponible:** `backend/wsgi.py` expone `app` importado desde `backend/app.py`.
+- **Arranque local actual:** servidor de desarrollo Flask en `127.0.0.1:5000`; producción Docker ejecuta Gunicorn en `0.0.0.0:8000` dentro de la red privada.
 - **Proceso permanente requerido:** sí, una o más instancias WSGI de Flask deben permanecer activas mientras la aplicación esté disponible.
 - **Procesos adicionales requeridos:** no se encontró worker, scheduler, cola, Redis ni servicio de WebSocket propio.
 
-Un proveedor que no permita procesos Python residentes o una integración WSGI no puede ejecutar el backend actual. No debe exponerse `app.run()` como servidor de producción.
+Un proveedor que no permita procesos Python residentes o una integración WSGI no puede ejecutar el backend actual. No debe exponerse `app.run()` como servidor de producción. La configuración Docker queda documentada en `DOCKER_DEPLOY.md`; el build y arranque de Docker no se verificaron localmente porque Docker no estaba instalado en el equipo de auditoría.
 
 ### API y carga funcional
 

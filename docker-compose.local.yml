@@ -1,0 +1,82 @@
+services:
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:?Defina MYSQL_DATABASE en .env}
+      MYSQL_USER: ${MYSQL_USER:?Defina MYSQL_USER en .env}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Defina MYSQL_PASSWORD en .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Defina MYSQL_ROOT_PASSWORD en .env}
+    volumes:
+      - mysql_data_local:/var/lib/mysql
+      - ./database:/docker-entrypoint-initdb.d/database:ro
+      - ./database/docker-init/00-init.sh:/docker-entrypoint-initdb.d/00-init.sh:ro
+    ports:
+      - "3307:3306"
+    networks:
+      - mision_network_local
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p\"$$MYSQL_ROOT_PASSWORD\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      APP_ENV: development
+      FLASK_DEBUG: "false"
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_NAME: ${MYSQL_DATABASE:?Defina MYSQL_DATABASE en .env}
+      DB_USER: ${MYSQL_USER:?Defina MYSQL_USER en .env}
+      DB_PASSWORD: ${MYSQL_PASSWORD:?Defina MYSQL_PASSWORD en .env}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Defina JWT_SECRET_KEY en .env}
+      FRONTEND_URLS: http://localhost:8080,http://127.0.0.1:8080
+      TRUST_PROXY_HEADERS: "false"
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-2}
+      GUNICORN_THREADS: ${GUNICORN_THREADS:-2}
+      GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-60}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    networks:
+      - mision_network_local
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3)\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_URL: /api
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    networks:
+      - mision_network_local
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+networks:
+  mision_network_local:
+    driver: bridge
+
+volumes:
+  mysql_data_local:

@@ -248,6 +248,26 @@ La configuración de referencia para Linux con Nginx, Gunicorn, systemd y HTTPS 
 
 La evaluación de capacidad, almacenamiento y compatibilidad de proveedores está en [EVALUACION_HOSTING.md](EVALUACION_HOSTING.md). No subir `.env`, volúmenes de base de datos, `node_modules`, `.venv`, `dist` ni artefactos de pruebas.
 
+## Docker
+
+La arquitectura Docker separa Nginx/React, Gunicorn/Flask y MySQL 8.4. El frontend se compila con Node en una etapa de build y el contenedor final solo ejecuta Nginx; la API se consume en mismo origen mediante `/api`.
+
+Prueba local de la arquitectura completa:
+
+```powershell
+Copy-Item .env.docker.example .env
+docker compose -f docker-compose.local.yml up --build
+```
+
+El frontend queda en `http://localhost:8080`, backend en `http://localhost:8000` y MySQL en `localhost:3307`. Producción usa solo el puerto 80 y no publica MySQL:
+
+```bash
+cp .env.docker.example .env
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+La guía de VPS, HTTPS, backups, restauración, migraciones manuales y actualización está en [DOCKER_DEPLOY.md](DOCKER_DEPLOY.md). No ejecutar `docker compose down -v` en producción porque elimina el volumen de MySQL.
+
 ## Pruebas
 
 Backend:
