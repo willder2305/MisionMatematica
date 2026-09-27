@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import logoMision from "../assets/pixel/logo_mision_matematica_pixel.png";
 import personajeNino from "../assets/juego/sprits/sprit M1/S1Venfrente.png";
 import personajeNina from "../assets/juego/sprits/sprit F1/S1Venfrente.png";
+import ResponsiveModal from "../components/ui/ResponsiveModal";
 import { login } from "../services/authService";
 import { navegarInternamente } from "../services/navigationService";
 
@@ -20,6 +21,7 @@ const LoginPage = () => {
   const [mostrarPassword, setMostrarPassword] = useState(false);
   const [capsLockActivo, setCapsLockActivo] = useState(false);
   const [fraseActiva, setFraseActiva] = useState(0);
+  const [recuperacionAbierta, setRecuperacionAbierta] = useState(false);
 
   useEffect(() => {
     // Rota microfrases educativas sin afectar la navegacion ni la sesion.
@@ -155,10 +157,18 @@ const LoginPage = () => {
             Crear cuenta
           </button>
         </div>
-        <button type="button" className="auth-text-button login-forgot" onClick={() => navegarInternamente("/recuperar-password")}>
+        <button type="button" className="auth-text-button login-forgot" onClick={() => setRecuperacionAbierta(true)}>
           ¿Olvidaste tu contraseña?
         </button>
       </form>
+      <ResponsiveModal abierto={recuperacionAbierta} onCerrar={() => setRecuperacionAbierta(false)} titulo="Recuperar contraseña">
+        <h2>Recuperar contraseña</h2>
+        <p>Para recuperar el acceso a tu cuenta, contacta con el administrador.</p>
+        <p><a href="mailto:wruizh1@miumg.edu.gt">wruizh1@miumg.edu.gt</a></p>
+        <div className="modal-actions">
+          <button type="button" onClick={() => setRecuperacionAbierta(false)}>Entendido</button>
+        </div>
+      </ResponsiveModal>
     </main>
   );
 };

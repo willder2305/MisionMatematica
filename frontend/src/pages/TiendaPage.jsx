@@ -7,6 +7,7 @@ import { obtenerMapaConfig } from "../config/mapasConfig";
 import { obtenerPersonajeConfig } from "../config/personajesConfig";
 import { obtenerUsuarioLocal } from "../services/authService";
 import { actualizarPersonaje, comprarItem, obtenerTienda } from "../services/personalizacionService";
+import { getCharacterOwnershipState } from "../utils/characterOwnership";
 
 /**
  * Presenta el catálogo personal del estudiante y su inventario real.
@@ -72,7 +73,14 @@ const TiendaPage = () => {
       setMensaje({ tipo: "success", texto: `${compraPendiente.nombre} ya es tuyo.` });
       botonCompraRef.current?.focus();
     } catch (error) {
-      setErrorCompra(error.message || "No fue posible realizar la compra. Intenta nuevamente.");
+      if (error.code === "articulo_ya_adquirido") {
+        setDatos(error.data || await obtenerTienda().then((respuesta) => respuesta.data));
+        setCompraPendiente(null);
+        setMensaje({ tipo: "success", texto: error.message });
+        botonCompraRef.current?.focus();
+      } else {
+        setErrorCompra(error.message || "No fue posible realizar la compra. Intenta nuevamente.");
+      }
     } finally {
       setOcupado(false);
     }
@@ -89,7 +97,8 @@ const TiendaPage = () => {
   };
   if (cargando) return <PixelLoader text="Abriendo la tienda..." />;
   const config = personaje ? obtenerPersonajeConfig(personaje.key) : null;
-  const puedeComprar = personaje && !personaje.desbloqueado && datos.saldo_monedas >= personaje.precio_monedas;
+  const estadoPersonaje = getCharacterOwnershipState(personaje);
+  const puedeComprar = estadoPersonaje === "locked" && datos.saldo_monedas >= personaje.precio_monedas;
   return <section className="content tienda-page">
     <div className="student-page-heading"><div><h1>Tienda</h1><p>Desbloquea nuevos compañeros y lugares para jugar.</p></div><CoinBalance saldo={datos?.saldo_monedas} /></div>
     <PixelAlert tipo={mensaje.tipo} texto={mensaje.texto} />
@@ -98,7 +107,7 @@ const TiendaPage = () => {
       <article className="store-character-card">
         <img className="pixel-art store-character-preview" src={config.vistas[vista]} alt={personaje.nombre} />
         <h2>{personaje.nombre}</h2>
-        {personaje.seleccionado ? <strong>Personaje actual</strong> : personaje.desbloqueado ? <button type="button" className="pixel-primary-button" disabled={ocupado} onClick={() => seleccionar(personaje)}>Seleccionar</button> : <><CoinBalance saldo={personaje.precio_monedas} className="store-price" /><button type="button" className="pixel-primary-button success" disabled={!puedeComprar || ocupado} onClick={(evento) => abrirCompra(personaje, evento.currentTarget)}>{puedeComprar ? "Comprar" : "Necesitas más monedas"}</button></>}
+        {estadoPersonaje === "selected" ? <strong>Personaje actual</strong> : estadoPersonaje === "owned" ? <button type="button" className="pixel-primary-button" disabled={ocupado} onClick={() => seleccionar(personaje)}>Seleccionar</button> : <><CoinBalance saldo={personaje.precio_monedas} className="store-price" /><button type="button" className="pixel-primary-button success" disabled={!puedeComprar || ocupado} onClick={(evento) => abrirCompra(personaje, evento.currentTarget)}>{puedeComprar ? "Comprar" : "Necesitas más monedas"}</button></>}
       </article>
       <button type="button" className="carousel-control" aria-label="Siguiente personaje" onClick={() => cambiar(1)}>Siguiente</button>
     </section>}

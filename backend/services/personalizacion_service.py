@@ -178,6 +178,26 @@ def _item_desbloqueado(id_usuario, tipo, item_key, cursor):
     return cursor.fetchone()
 
 
+def _propiedad_item(id_usuario, id_item, cursor, bloquear=False):
+    """Consulta una sola relación de inventario y, al comprar, la bloquea para evitar doble cobro."""
+    bloqueo = " FOR UPDATE" if bloquear else ""
+    cursor.execute(
+        f"""
+        SELECT id_usuario_item, estado
+        FROM usuario_items
+        WHERE id_usuario = %s AND id_item = %s
+        LIMIT 1{bloqueo}
+        """,
+        (id_usuario, id_item),
+    )
+    return cursor.fetchone()
+
+
+def _item_adquirido(fila):
+    """Determina propiedad desde el catálogo y una relación activa de inventario."""
+    return bool(fila.get("es_inicial") or fila.get("desbloqueado"))
+
+
 def puede_usar_personaje(id_usuario, personaje_key, cursor):
     """Autoriza personajes starter o registrados en el inventario real del estudiante."""
     cursor.execute(
@@ -192,10 +212,11 @@ def puede_usar_personaje(id_usuario, personaje_key, cursor):
         (id_usuario, personaje_key),
     )
     personaje = cursor.fetchone()
-    return bool(personaje and (personaje.get("es_inicial") or personaje.get("desbloqueado")))
+    return bool(personaje and _item_adquirido(personaje))
 
 
 def _serializar_item(fila, personaje_actual=None, mapa_fijo=None):
+    adquirido = _item_adquirido(fila)
     return {
         "id_item": fila["id_item"],
         "tipo": fila["tipo"],
@@ -203,11 +224,13 @@ def _serializar_item(fila, personaje_actual=None, mapa_fijo=None):
         "nombre": fila["nombre"],
         "precio_monedas": int(fila["precio_monedas"]),
         "es_inicial": bool(fila["es_inicial"]),
-        "desbloqueado": bool(fila.get("desbloqueado")),
+        "desbloqueado": adquirido,
+        "adquirido": adquirido,
+        "activo": fila["estado"] == "activo",
         "seleccionado": (
-            fila["tipo"] == "personaje" and fila["item_key"] == personaje_actual
+            fila["tipo"] == "personaje" and fila["item_key"] == personaje_actual and adquirido
         ) or (
-            fila["tipo"] == "mapa" and fila["item_key"] == mapa_fijo
+            fila["tipo"] == "mapa" and fila["item_key"] == mapa_fijo and adquirido
         ),
     }
 
@@ -294,14 +317,14 @@ def comprar_item_estudiante(usuario, id_item):
         if not item:
             conexion.rollback()
             return "datos_invalidos", "El artículo no está disponible.", None, {"id_item": "Artículo no disponible."}
-        cursor.execute(
-            "SELECT id_usuario_item FROM usuario_items WHERE id_usuario = %s AND id_item = %s FOR UPDATE",
-            (id_usuario, id_item),
-        )
-        if cursor.fetchone():
+        propiedad = _propiedad_item(id_usuario, id_item, cursor, bloquear=True)
+        if propiedad and propiedad["estado"] == "activo":
             datos = _leer_personalizacion(id_usuario, cursor)
             conexion.commit()
-            return "consultado", "Este artículo ya está desbloqueado.", datos, {}
+            return "articulo_ya_adquirido", f"{item['nombre']} ya es tuyo.", {
+                **datos,
+                "resultado_compra": {"id_item": id_item, "key": item["item_key"], "adquirido": True},
+            }, {}
 
         saldo_anterior = int(monedero["saldo_monedas"])
         precio = int(item["precio_monedas"])
@@ -311,7 +334,14 @@ def comprar_item_estudiante(usuario, id_item):
 
         saldo_nuevo = saldo_anterior - precio
         cursor.execute("UPDATE monederos SET saldo_monedas = %s WHERE id_usuario = %s", (saldo_nuevo, id_usuario))
-        cursor.execute("INSERT INTO usuario_items (id_usuario, id_item) VALUES (%s, %s)", (id_usuario, id_item))
+        if propiedad:
+            # Conserva el historial de inventario y reactiva una relación que estaba inactiva.
+            cursor.execute(
+                "UPDATE usuario_items SET estado = 'activo', fecha_desbloqueo = CURRENT_TIMESTAMP WHERE id_usuario_item = %s",
+                (propiedad["id_usuario_item"],),
+            )
+        else:
+            cursor.execute("INSERT INTO usuario_items (id_usuario, id_item) VALUES (%s, %s)", (id_usuario, id_item))
         registrar_movimiento_monedas(
             cursor,
             id_usuario=id_usuario,
@@ -325,7 +355,10 @@ def comprar_item_estudiante(usuario, id_item):
         )
         datos = _leer_personalizacion(id_usuario, cursor)
         conexion.commit()
-        return "consultado", "Artículo desbloqueado correctamente.", datos, {}
+        return "consultado", f"¡{item['nombre']} ahora es tuyo!", {
+            **datos,
+            "resultado_compra": {"id_item": id_item, "key": item["item_key"], "adquirido": True},
+        }, {}
     except Exception:
         conexion.rollback()
         raise

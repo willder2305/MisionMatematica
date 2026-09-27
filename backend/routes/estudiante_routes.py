@@ -25,6 +25,7 @@ def _codigo_http(codigo):
     # Traduce codigos internos del modulo estudiante a HTTP.
     return {
         "consultado": 200,
+        "articulo_ya_adquirido": 409,
         "datos_invalidos": 400,
         "no_autorizado": 403,
     }.get(codigo, 400)
@@ -34,6 +35,7 @@ def _respuesta(codigo, mensaje, data=None, errors=None):
     # Mantiene el formato JSON uniforme de la API.
     return jsonify({
         "success": codigo == "consultado",
+        "code": codigo,
         "message": mensaje,
         "data": data,
         "errors": errors or {},

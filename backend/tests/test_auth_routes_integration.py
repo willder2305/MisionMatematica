@@ -143,10 +143,17 @@ class AuthRoutesIntegrationTest(unittest.TestCase):
         sesion = self._registrar(self.correo_estudiante, "estudiante")
         headers = self._auth_headers(sesion["access_token"])
 
-        prohibido = self.client.get("/api/admin/panel", headers=headers)
+        rutas_prohibidas = (
+            "/api/admin/panel",
+            "/api/docente/reportes/agente/exportar/pdf",
+            "/api/admin/reportes/institucional/exportar/xlsx",
+        )
         me = self.client.get("/api/auth/me", headers=headers)
 
-        self.assertEqual(prohibido.status_code, 403, prohibido.get_json())
+        for ruta in rutas_prohibidas:
+            with self.subTest(ruta=ruta):
+                prohibido = self.client.get(ruta, headers=headers)
+                self.assertEqual(prohibido.status_code, 403, prohibido.get_json())
         self.assertEqual(me.status_code, 200, me.get_json())
 
     def test_404_no_invalida_sesion(self):

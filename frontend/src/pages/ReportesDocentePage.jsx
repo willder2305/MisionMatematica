@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
+import ResponsiveSelect from "../components/ui/ResponsiveSelect";
 import PixelAlert from "../components/ui/PixelAlert";
 import PixelEmptyState from "../components/ui/PixelEmptyState";
 import PixelLoader from "../components/ui/PixelLoader";
+import ReportExportButtons from "../components/ui/ReportExportButtons";
 import { obtenerAsignaciones, obtenerContextoAsignaciones } from "../services/asignacionesService";
 import { obtenerUsuarioLocal } from "../services/authService";
 import { navegarInternamente } from "../services/navigationService";
@@ -10,6 +12,7 @@ import {
   obtenerEstudiantesDocente,
   obtenerPanelDocente,
   obtenerReporteAgente,
+  exportarReporteAgente,
 } from "../services/reportesDocenteService";
 import { obtenerTemasPorGrado } from "../services/temasService";
 import { formatDateTime, formatLabel } from "../constants/uiLabels";
@@ -45,6 +48,7 @@ const ReportesDocentePage = () => {
   const [filtros, setFiltros] = useState(filtrosIniciales);
   const [cargando, setCargando] = useState(true);
   const [mensaje, setMensaje] = useState({ tipo: "", texto: "" });
+  const [exportando, setExportando] = useState("");
   const usuario = obtenerUsuarioLocal();
 
   useEffect(() => {
@@ -156,6 +160,19 @@ const ReportesDocentePage = () => {
     }
   };
 
+  const exportarReporte = async (formato) => {
+    // Solicita el archivo al backend usando exactamente los filtros ya aplicados.
+    try {
+      setExportando(formato);
+      setMensaje({ tipo: "", texto: "" });
+      await exportarReporteAgente(formato, filtros);
+    } catch (error) {
+      setMensaje({ tipo: "error", texto: error.message });
+    } finally {
+      setExportando("");
+    }
+  };
+
   const seccionesDisponibles = useMemo(() => {
     const grado = gradosContexto.find((item) => String(item.id_institucion_grado) === String(filtros.id_institucion_grado));
     return grado?.secciones?.map((seccion) => ({ id_seccion: seccion.id_seccion, nombre: seccion.nombre_seccion })) || [];
@@ -220,52 +237,52 @@ const ReportesDocentePage = () => {
         <form className="reports-filter-form" onSubmit={aplicarFiltros}>
           <label>
             <span>Grado</span>
-            <select name="id_institucion_grado" value={filtros.id_institucion_grado} onChange={cambiarFiltro}>
+            <ResponsiveSelect name="id_institucion_grado" value={filtros.id_institucion_grado} onChange={cambiarFiltro}>
               <option value="">Todos</option>
               {gradosContexto.map((grado) => (
                 <option key={grado.id_institucion_grado} value={grado.id_institucion_grado}>
                   {grado.nombre_grado}
                 </option>
               ))}
-            </select>
+            </ResponsiveSelect>
           </label>
           <label>
             <span>Sección</span>
-            <select name="id_seccion" value={filtros.id_seccion} onChange={cambiarFiltro}>
+            <ResponsiveSelect name="id_seccion" value={filtros.id_seccion} onChange={cambiarFiltro}>
               <option value="">Todas</option>
               {seccionesDisponibles.map((seccion) => (
                 <option key={seccion.id_seccion} value={seccion.id_seccion}>{seccion.nombre}</option>
               ))}
-            </select>
+            </ResponsiveSelect>
           </label>
           <label>
             <span>Estudiante</span>
-            <select name="id_estudiante" value={filtros.id_estudiante} onChange={cambiarFiltro}>
+            <ResponsiveSelect name="id_estudiante" value={filtros.id_estudiante} onChange={cambiarFiltro}>
               <option value="">Todos</option>
               {estudiantesDisponibles.map((estudiante) => (
                 <option key={`${estudiante.id_usuario}-${estudiante.id_institucion_grado || "base"}`} value={estudiante.id_usuario}>
                   {estudiante.nombres} {estudiante.apellidos}
                 </option>
               ))}
-            </select>
+            </ResponsiveSelect>
           </label>
           <label>
             <span>Tema</span>
-            <select name="id_tema" value={filtros.id_tema} onChange={cambiarFiltro} disabled={!filtros.id_institucion_grado}>
+            <ResponsiveSelect name="id_tema" value={filtros.id_tema} onChange={cambiarFiltro} disabled={!filtros.id_institucion_grado}>
               <option value="">Todos</option>
               {temas.map((tema) => (
               <option key={tema.id_tema} value={tema.id_tema}>{formatLabel(tema.nombre_tema)}</option>
               ))}
-            </select>
+            </ResponsiveSelect>
           </label>
           <label>
             <span>Asignación</span>
-            <select name="id_asignacion" value={filtros.id_asignacion} onChange={cambiarFiltro}>
+            <ResponsiveSelect name="id_asignacion" value={filtros.id_asignacion} onChange={cambiarFiltro}>
               <option value="">Todas</option>
               {asignacionesDisponibles.map((asignacion) => (
                 <option key={asignacion.id_asignacion} value={asignacion.id_asignacion}>{asignacion.nombre}</option>
               ))}
-            </select>
+            </ResponsiveSelect>
           </label>
           <label>
             <span>Desde</span>
@@ -280,6 +297,7 @@ const ReportesDocentePage = () => {
             <button type="button" className="secondary" onClick={limpiarFiltros} disabled={cargando}>Limpiar</button>
           </div>
         </form>
+        <ReportExportButtons cargando={exportando} onExportar={exportarReporte} />
       </section>
 
       <section className="reports-grid">

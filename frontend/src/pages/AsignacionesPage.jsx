@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import ResponsiveSelect from "../components/ui/ResponsiveSelect";
 import PixelAlert from "../components/ui/PixelAlert";
 import PixelLoader from "../components/ui/PixelLoader";
 import {
@@ -21,7 +22,6 @@ const formularioInicial = {
   instrucciones: "",
   tipo: "generacion_automatica",
   id_nivel_inicial: "",
-  cantidad_preguntas: 10,
   fecha_inicio: ahoraLocal(),
   fecha_limite: "",
   obligatoria: true,
@@ -114,7 +114,7 @@ const AsignacionesPage = () => {
     id_institucion_grado: Number(formulario.id_institucion_grado),
     id_seccion: Number(formulario.id_seccion),
     id_nivel_inicial: Number(formulario.id_nivel_inicial),
-    cantidad_preguntas: Number(formulario.cantidad_preguntas),
+    cantidad_preguntas: 10,
     fecha_limite: formulario.fecha_limite || null,
     ejercicios: formulario.ejercicios,
   });
@@ -149,7 +149,6 @@ const AsignacionesPage = () => {
       instrucciones: asignacion.instrucciones || "",
       tipo: asignacion.tipo,
       id_nivel_inicial: String(asignacion.id_nivel_inicial),
-      cantidad_preguntas: asignacion.cantidad_preguntas,
       fecha_inicio: (asignacion.fecha_inicio || "").replace(" ", "T").slice(0, 16),
       fecha_limite: asignacion.fecha_limite ? asignacion.fecha_limite.replace(" ", "T").slice(0, 16) : "",
       obligatoria: asignacion.obligatoria,
@@ -187,32 +186,32 @@ const AsignacionesPage = () => {
         <form className="template-form" onSubmit={guardar}>
           <label>
             <span>Grado</span>
-            <select name="id_institucion_grado" value={formulario.id_institucion_grado} onChange={cambiarCampo} required disabled={Boolean(editando)}>
+            <ResponsiveSelect name="id_institucion_grado" value={formulario.id_institucion_grado} onChange={cambiarCampo} required disabled={Boolean(editando)}>
               <option value="">Seleccione</option>
               {gradosContexto.map((grado) => (
                 <option key={grado.id_institucion_grado} value={grado.id_institucion_grado}>
                   {grado.nombre_grado}
                 </option>
               ))}
-            </select>
+            </ResponsiveSelect>
           </label>
           <label>
             <span>Sección</span>
-            <select name="id_seccion" value={formulario.id_seccion} onChange={cambiarCampo} required disabled={!formulario.id_institucion_grado || Boolean(editando)}>
+            <ResponsiveSelect name="id_seccion" value={formulario.id_seccion} onChange={cambiarCampo} required disabled={!formulario.id_institucion_grado || Boolean(editando)}>
               <option value="">Seleccione</option>
               {seccionesDisponibles.map((seccion) => (
                 <option key={seccion.id_seccion} value={seccion.id_seccion}>{seccion.nombre_seccion}</option>
               ))}
-            </select>
+            </ResponsiveSelect>
           </label>
           <label>
             <span>Nivel inicial</span>
-            <select name="id_nivel_inicial" value={formulario.id_nivel_inicial} onChange={cambiarCampo} required>
+            <ResponsiveSelect name="id_nivel_inicial" value={formulario.id_nivel_inicial} onChange={cambiarCampo} required>
               <option value="">Seleccione</option>
               {niveles.map((nivel) => (
                 <option key={nivel.id_nivel} value={nivel.id_nivel}>{nivel.nombre}</option>
               ))}
-            </select>
+            </ResponsiveSelect>
           </label>
           <label>
             <span>Nombre</span>
@@ -220,14 +219,10 @@ const AsignacionesPage = () => {
           </label>
           <label>
             <span>Tipo</span>
-            <select name="tipo" value={formulario.tipo} onChange={cambiarCampo}>
+            <ResponsiveSelect name="tipo" value={formulario.tipo} onChange={cambiarCampo}>
               <option value="generacion_automatica">Generación automática</option>
               <option value="ejercicios_especificos">Ejercicios específicos</option>
-            </select>
-          </label>
-          <label>
-            <span>Cantidad</span>
-            <input name="cantidad_preguntas" type="number" min="1" max="100" value={formulario.cantidad_preguntas} onChange={cambiarCampo} />
+            </ResponsiveSelect>
           </label>
           <label>
             <span>Fecha inicio</span>
@@ -239,13 +234,13 @@ const AsignacionesPage = () => {
           </label>
           <label>
             <span>Estado</span>
-            <select name="estado" value={formulario.estado} onChange={cambiarCampo}>
+            <ResponsiveSelect name="estado" value={formulario.estado} onChange={cambiarCampo}>
               <option value="borrador">Borrador</option>
               <option value="activa">Activa</option>
               <option value="pausada">Pausada</option>
               <option value="finalizada">Finalizada</option>
               <option value="cancelada">Cancelada</option>
-            </select>
+            </ResponsiveSelect>
           </label>
           <label className="template-form-wide">
             <span>Instrucciones</span>

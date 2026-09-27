@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import ResponsiveSelect from "../components/ui/ResponsiveSelect";
 import logoMision from "../assets/pixel/logo_mision_matematica_pixel.png";
 import { obtenerPersonajeConfig } from "../config/personajesConfig";
 import { guardarSesion, obtenerAccessToken, obtenerRefreshToken, obtenerUsuarioLocal } from "../services/authService";
@@ -322,10 +323,10 @@ const OnboardingPage = () => {
           <>
             <label>
               Modalidad
-              <select name="modalidad" value={formulario.modalidad} onChange={cambiarCampo}>
+              <ResponsiveSelect name="modalidad" value={formulario.modalidad} onChange={cambiarCampo}>
                 <option value="cuenta_propia">Cuenta propia</option>
                 <option value="grupo_educativo">Grupo educativo</option>
-              </select>
+              </ResponsiveSelect>
             </label>
             {formulario.modalidad === "grupo_educativo" && (
               <label>

@@ -5,6 +5,7 @@ import CoinBalance from "../components/ui/CoinBalance";
 import { obtenerMapaConfig } from "../config/mapasConfig";
 import { obtenerPersonajeConfig } from "../config/personajesConfig";
 import { actualizarMapa, actualizarPersonaje, obtenerTienda } from "../services/personalizacionService";
+import { getCharacterOwnershipState, isCharacterOwned } from "../utils/characterOwnership";
 
 const MiPersonajePage = () => {
   const [datos, setDatos] = useState(null);
@@ -53,7 +54,7 @@ const MiPersonajePage = () => {
 
   if (cargando) return <PixelLoader text="Preparando tu personaje..." />;
 
-  const personajes = (datos?.personajes || []).filter((item) => item.desbloqueado);
+  const personajes = (datos?.personajes || []).filter(isCharacterOwned);
   const mapas = (datos?.mapas || []).filter((item) => item.desbloqueado);
   const preferencias = datos?.preferencias || {};
 
@@ -69,11 +70,12 @@ const MiPersonajePage = () => {
         <div className="personalizacion-grid">
           {personajes.map((item) => {
             const config = obtenerPersonajeConfig(item.key);
+            const estadoPersonaje = getCharacterOwnershipState(item);
             return <article className={`personalizacion-card ${item.seleccionado ? "selected" : ""}`} key={item.key}>
               <img className="pixel-art personalizacion-character" src={config.vistas[0]} alt={item.nombre} />
               <strong>{item.nombre}</strong>
-              <button type="button" className="pixel-primary-button" disabled={guardando || item.seleccionado} onClick={() => seleccionarPersonaje(item)}>
-                {item.seleccionado ? "Personaje actual" : "Seleccionar"}
+              <button type="button" className="pixel-primary-button" disabled={guardando || estadoPersonaje === "selected"} onClick={() => seleccionarPersonaje(item)}>
+                {estadoPersonaje === "selected" ? "Personaje actual" : "Seleccionar"}
               </button>
             </article>;
           })}

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import ResponsiveSelect from "../components/ui/ResponsiveSelect";
 import ExitGameModal from "../components/juego/ExitGameModal";
 import GameBoard from "../components/juego/GameBoard";
 import GameFinishedModal from "../components/juego/GameFinishedModal";
@@ -549,7 +550,7 @@ const JuegoPage = () => {
             {!idAsignacion && (
               <label>
                 <span>Tema</span>
-                <select value={idTema} onChange={(evento) => setIdTema(evento.target.value)}>
+                <ResponsiveSelect value={idTema} onChange={(evento) => setIdTema(evento.target.value)}>
                   <option value="">Seleccione un tema</option>
                   {Object.entries(temasPorCategoria).map(([categoria, temasCategoria]) => (
                     <optgroup key={categoria} label={categoria}>
@@ -560,7 +561,7 @@ const JuegoPage = () => {
                       ))}
                     </optgroup>
                   ))}
-                </select>
+                </ResponsiveSelect>
               </label>
             )}
 

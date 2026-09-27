@@ -1,4 +1,5 @@
-﻿import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
+import ResponsiveSelect from "../ui/ResponsiveSelect";
 
 const estadoInicial = {
   id_grado: "",
@@ -158,20 +159,20 @@ const SeccionForm = ({ grados, seccionSeleccionada, guardando, onGuardar, onCanc
 
       <label>
         Grado
-        <select name="id_grado" value={formulario.id_grado} onChange={actualizarCampo}>
+        <ResponsiveSelect name="id_grado" value={formulario.id_grado} onChange={actualizarCampo}>
           <option value="">Seleccione un grado</option>
           {grados.map((grado) => (
             <option key={grado.id_grado} value={grado.id_grado}>
               {grado.codigo_grado} - {grado.nombre_grado}
             </option>
           ))}
-        </select>
+        </ResponsiveSelect>
         {errores.id_grado && <span className="field-error">{errores.id_grado}</span>}
       </label>
 
       <label>
         Sección
-        <select
+        <ResponsiveSelect
           name="nombre_seccion"
           value={formulario.nombre_seccion}
           onChange={actualizarCampo}
@@ -180,7 +181,7 @@ const SeccionForm = ({ grados, seccionSeleccionada, guardando, onGuardar, onCanc
           {SECCIONES_PERMITIDAS.map((seccion) => (
             <option key={seccion} value={seccion}>{seccion}</option>
           ))}
-        </select>
+        </ResponsiveSelect>
         {errores.nombre_seccion && <span className="field-error">{errores.nombre_seccion}</span>}
       </label>
 
@@ -197,10 +198,10 @@ const SeccionForm = ({ grados, seccionSeleccionada, guardando, onGuardar, onCanc
 
       <label>
         Estado
-        <select name="estado" value={formulario.estado} onChange={actualizarCampo}>
+        <ResponsiveSelect name="estado" value={formulario.estado} onChange={actualizarCampo}>
           <option value="activo">Activo</option>
           <option value="inactivo">Inactivo</option>
-        </select>
+        </ResponsiveSelect>
         {errores.estado && <span className="field-error">{errores.estado}</span>}
       </label>
 

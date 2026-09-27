@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
+import ResponsiveSelect from "../components/ui/ResponsiveSelect";
 import PixelAlert from "../components/ui/PixelAlert";
 import PixelEmptyState from "../components/ui/PixelEmptyState";
 import PixelLoader from "../components/ui/PixelLoader";
+import ReportExportButtons from "../components/ui/ReportExportButtons";
 import {
   actualizarEjercicioAdmin,
   actualizarReglaAdmin,
@@ -13,6 +15,7 @@ import {
   cambiarRolUsuarioAdmin,
   crearEjercicioAdmin,
   crearTemaAdmin,
+  exportarReporteInstitucionalAdmin,
   obtenerAuditoriaAdmin,
   obtenerCatalogosReportesAdmin,
   obtenerEjerciciosAdmin,
@@ -116,6 +119,7 @@ const AdminPage = () => {
   const [filtroAuditoria, setFiltroAuditoria] = useState({ accion: "", entidad: "", resultado: "", limite: 100 });
   const [filtroReporte, setFiltroReporte] = useState(filtroReporteInicial);
   const [cargando, setCargando] = useState(true);
+  const [exportando, setExportando] = useState("");
   const [mensaje, setMensaje] = useState({ tipo: "", texto: "" });
   const usuario = obtenerUsuarioLocal();
 
@@ -259,6 +263,19 @@ const AdminPage = () => {
       ...(name === "id_institucion_grado" ? { id_seccion: "", id_asignacion: "" } : {}),
       ...(name === "id_seccion" ? { id_estudiante: "", id_asignacion: "" } : {}),
     }));
+  };
+
+  const exportarReporteInstitucional = async (formato) => {
+    // Descarga el reporte usando los mismos filtros institucionales visibles.
+    try {
+      setExportando(formato);
+      setMensaje({ tipo: "", texto: "" });
+      await exportarReporteInstitucionalAdmin(formato, filtroReporte);
+    } catch (error) {
+      setMensaje({ tipo: "error", texto: error.message });
+    } finally {
+      setExportando("");
+    }
   };
 
   const guardarTema = async (evento) => {
@@ -474,18 +491,18 @@ const AdminPage = () => {
               onChange={(evento) => setFiltroUsuario((actual) => ({ ...actual, busqueda: evento.target.value }))}
               placeholder="Buscar por nombre o correo"
             />
-            <select value={filtroUsuario.rol} onChange={(evento) => setFiltroUsuario((actual) => ({ ...actual, rol: evento.target.value }))}>
+            <ResponsiveSelect value={filtroUsuario.rol} onChange={(evento) => setFiltroUsuario((actual) => ({ ...actual, rol: evento.target.value }))}>
               <option value="">Todos los roles</option>
               <option value="administrador">Administrador</option>
               <option value="docente">Docente</option>
               <option value="estudiante">Estudiante</option>
-            </select>
-            <select value={filtroUsuario.estado} onChange={(evento) => setFiltroUsuario((actual) => ({ ...actual, estado: evento.target.value }))}>
+            </ResponsiveSelect>
+            <ResponsiveSelect value={filtroUsuario.estado} onChange={(evento) => setFiltroUsuario((actual) => ({ ...actual, estado: evento.target.value }))}>
               <option value="">Todos los estados</option>
               <option value="activo">Activo</option>
               <option value="inactivo">Inactivo</option>
               <option value="bloqueado">Bloqueado</option>
-            </select>
+            </ResponsiveSelect>
             <button type="submit">Filtrar</button>
           </form>
           <div className="table-wrapper">
@@ -507,11 +524,11 @@ const AdminPage = () => {
                     <td>{item.nombres} {item.apellidos}</td>
                     <td>{item.correo}</td>
                     <td>
-                      <select value={item.rol} onChange={(evento) => cambiarRolUsuario(item, evento.target.value)}>
+                      <ResponsiveSelect value={item.rol} onChange={(evento) => cambiarRolUsuario(item, evento.target.value)}>
                         <option value="administrador">Administrador</option>
                         <option value="docente">Docente</option>
                         <option value="estudiante">Estudiante</option>
-                      </select>
+                      </ResponsiveSelect>
                     </td>
                     <td>{formatLabel(item.estado)}</td>
                     <td>{item.onboarding_completado ? "Completo" : "Pendiente"}</td>
@@ -534,9 +551,9 @@ const AdminPage = () => {
         <section className="panel">
           <h2>{formTema.id_tema ? "Editar tema" : "Nuevo tema"}</h2>
           <form className="admin-form" onSubmit={guardarTema}>
-            <label><span>Grado</span><select value={formTema.id_grado} onChange={(evento) => setFormTema((actual) => ({ ...actual, id_grado: evento.target.value }))}><option value="">Seleccione</option>{grados.map((grado) => <option key={grado.id_grado} value={grado.id_grado}>{grado.nombre_grado}</option>)}</select></label>
+            <label><span>Grado</span><ResponsiveSelect value={formTema.id_grado} onChange={(evento) => setFormTema((actual) => ({ ...actual, id_grado: evento.target.value }))}><option value="">Seleccione</option>{grados.map((grado) => <option key={grado.id_grado} value={grado.id_grado}>{grado.nombre_grado}</option>)}</ResponsiveSelect></label>
             <label><span>Nombre</span><input value={formTema.nombre_tema} onChange={(evento) => setFormTema((actual) => ({ ...actual, nombre_tema: evento.target.value }))} /></label>
-            <label><span>Estado</span><select value={formTema.estado} onChange={(evento) => setFormTema((actual) => ({ ...actual, estado: evento.target.value }))}><option value="activo">Activo</option><option value="inactivo">Inactivo</option></select></label>
+            <label><span>Estado</span><ResponsiveSelect value={formTema.estado} onChange={(evento) => setFormTema((actual) => ({ ...actual, estado: evento.target.value }))}><option value="activo">Activo</option><option value="inactivo">Inactivo</option></ResponsiveSelect></label>
             <label className="admin-form-wide"><span>Descripción</span><input value={formTema.descripcion} onChange={(evento) => setFormTema((actual) => ({ ...actual, descripcion: evento.target.value }))} /></label>
             <div className="form-actions admin-form-wide">
               <button type="submit">{formTema.id_tema ? "Actualizar" : "Crear"}</button>
@@ -544,8 +561,8 @@ const AdminPage = () => {
             </div>
           </form>
           <form className="admin-filter-form" onSubmit={aplicarFiltroTemas}>
-            <select value={filtroTema.id_grado} onChange={(evento) => setFiltroTema((actual) => ({ ...actual, id_grado: evento.target.value }))}><option value="">Todos los grados</option>{grados.map((grado) => <option key={grado.id_grado} value={grado.id_grado}>{grado.nombre_grado}</option>)}</select>
-            <select value={filtroTema.estado} onChange={(evento) => setFiltroTema((actual) => ({ ...actual, estado: evento.target.value }))}><option value="">Todos los estados</option><option value="activo">Activo</option><option value="inactivo">Inactivo</option></select>
+            <ResponsiveSelect value={filtroTema.id_grado} onChange={(evento) => setFiltroTema((actual) => ({ ...actual, id_grado: evento.target.value }))}><option value="">Todos los grados</option>{grados.map((grado) => <option key={grado.id_grado} value={grado.id_grado}>{grado.nombre_grado}</option>)}</ResponsiveSelect>
+            <ResponsiveSelect value={filtroTema.estado} onChange={(evento) => setFiltroTema((actual) => ({ ...actual, estado: evento.target.value }))}><option value="">Todos los estados</option><option value="activo">Activo</option><option value="inactivo">Inactivo</option></ResponsiveSelect>
             <button type="submit">Filtrar</button>
           </form>
           <div className="table-wrapper">
@@ -561,10 +578,10 @@ const AdminPage = () => {
         <section className="panel">
           <h2>{formEjercicio.id_ejercicio ? "Editar ejercicio" : "Nuevo ejercicio"}</h2>
           <form className="admin-form" onSubmit={guardarEjercicio}>
-            <label><span>Tema</span><select value={formEjercicio.id_tema} onChange={(evento) => setFormEjercicio((actual) => ({ ...actual, id_tema: evento.target.value }))}><option value="">Seleccione</option>{temasOrdenados.map((tema) => <option key={tema.id_tema} value={tema.id_tema}>{tema.nombre_grado} - {formatLabel(tema.nombre_tema)}</option>)}</select></label>
-            <label><span>Nivel</span><select value={formEjercicio.id_nivel} onChange={(evento) => setFormEjercicio((actual) => ({ ...actual, id_nivel: evento.target.value }))}><option value="">Seleccione</option>{niveles.map((nivel) => <option key={nivel.id_nivel} value={nivel.id_nivel}>{nivel.nombre}</option>)}</select></label>
-            <label><span>Tipo</span><select value={formEjercicio.tipo_respuesta} onChange={(evento) => setFormEjercicio((actual) => ({ ...actual, tipo_respuesta: evento.target.value }))}><option value="numerica">Numérica</option><option value="seleccion_multiple">Selección múltiple</option></select></label>
-            <label><span>Estado</span><select value={formEjercicio.estado} onChange={(evento) => setFormEjercicio((actual) => ({ ...actual, estado: evento.target.value }))}><option value="borrador">Borrador</option><option value="publicado">Publicado</option><option value="desactivado">Desactivado</option></select></label>
+            <label><span>Tema</span><ResponsiveSelect value={formEjercicio.id_tema} onChange={(evento) => setFormEjercicio((actual) => ({ ...actual, id_tema: evento.target.value }))}><option value="">Seleccione</option>{temasOrdenados.map((tema) => <option key={tema.id_tema} value={tema.id_tema}>{tema.nombre_grado} - {formatLabel(tema.nombre_tema)}</option>)}</ResponsiveSelect></label>
+            <label><span>Nivel</span><ResponsiveSelect value={formEjercicio.id_nivel} onChange={(evento) => setFormEjercicio((actual) => ({ ...actual, id_nivel: evento.target.value }))}><option value="">Seleccione</option>{niveles.map((nivel) => <option key={nivel.id_nivel} value={nivel.id_nivel}>{nivel.nombre}</option>)}</ResponsiveSelect></label>
+            <label><span>Tipo</span><ResponsiveSelect value={formEjercicio.tipo_respuesta} onChange={(evento) => setFormEjercicio((actual) => ({ ...actual, tipo_respuesta: evento.target.value }))}><option value="numerica">Numérica</option><option value="seleccion_multiple">Selección múltiple</option></ResponsiveSelect></label>
+            <label><span>Estado</span><ResponsiveSelect value={formEjercicio.estado} onChange={(evento) => setFormEjercicio((actual) => ({ ...actual, estado: evento.target.value }))}><option value="borrador">Borrador</option><option value="publicado">Publicado</option><option value="desactivado">Desactivado</option></ResponsiveSelect></label>
             <label className="admin-form-wide"><span>Enunciado</span><input value={formEjercicio.enunciado} onChange={(evento) => setFormEjercicio((actual) => ({ ...actual, enunciado: evento.target.value }))} /></label>
             <label><span>Respuesta correcta</span><input value={formEjercicio.respuesta_correcta} onChange={(evento) => setFormEjercicio((actual) => ({ ...actual, respuesta_correcta: evento.target.value }))} /></label>
             <label><span>Opciones separadas por coma</span><input value={formEjercicio.opciones} onChange={(evento) => setFormEjercicio((actual) => ({ ...actual, opciones: evento.target.value }))} /></label>
@@ -576,9 +593,9 @@ const AdminPage = () => {
             </div>
           </form>
           <form className="admin-filter-form" onSubmit={aplicarFiltroEjercicios}>
-            <select value={filtroEjercicio.id_tema} onChange={(evento) => setFiltroEjercicio((actual) => ({ ...actual, id_tema: evento.target.value }))}><option value="">Todos los temas</option>{temasOrdenados.map((tema) => <option key={tema.id_tema} value={tema.id_tema}>{tema.nombre_grado} - {formatLabel(tema.nombre_tema)}</option>)}</select>
-            <select value={filtroEjercicio.id_nivel} onChange={(evento) => setFiltroEjercicio((actual) => ({ ...actual, id_nivel: evento.target.value }))}><option value="">Todos los niveles</option>{niveles.map((nivel) => <option key={nivel.id_nivel} value={nivel.id_nivel}>{nivel.nombre}</option>)}</select>
-            <select value={filtroEjercicio.estado} onChange={(evento) => setFiltroEjercicio((actual) => ({ ...actual, estado: evento.target.value }))}><option value="">Todos los estados</option><option value="borrador">Borrador</option><option value="publicado">Publicado</option><option value="desactivado">Desactivado</option></select>
+            <ResponsiveSelect value={filtroEjercicio.id_tema} onChange={(evento) => setFiltroEjercicio((actual) => ({ ...actual, id_tema: evento.target.value }))}><option value="">Todos los temas</option>{temasOrdenados.map((tema) => <option key={tema.id_tema} value={tema.id_tema}>{tema.nombre_grado} - {formatLabel(tema.nombre_tema)}</option>)}</ResponsiveSelect>
+            <ResponsiveSelect value={filtroEjercicio.id_nivel} onChange={(evento) => setFiltroEjercicio((actual) => ({ ...actual, id_nivel: evento.target.value }))}><option value="">Todos los niveles</option>{niveles.map((nivel) => <option key={nivel.id_nivel} value={nivel.id_nivel}>{nivel.nombre}</option>)}</ResponsiveSelect>
+            <ResponsiveSelect value={filtroEjercicio.estado} onChange={(evento) => setFiltroEjercicio((actual) => ({ ...actual, estado: evento.target.value }))}><option value="">Todos los estados</option><option value="borrador">Borrador</option><option value="publicado">Publicado</option><option value="desactivado">Desactivado</option></ResponsiveSelect>
             <button type="submit">Filtrar</button>
           </form>
           <div className="table-wrapper">
@@ -596,8 +613,8 @@ const AdminPage = () => {
           <form className="admin-form" onSubmit={guardarRegla}>
             <label><span>Nombre</span><input value={formRegla.nombre} onChange={(evento) => setFormRegla((actual) => ({ ...actual, nombre: evento.target.value }))} /></label>
             <label><span>Prioridad</span><input type="number" value={formRegla.prioridad} onChange={(evento) => setFormRegla((actual) => ({ ...actual, prioridad: evento.target.value }))} /></label>
-            <label><span>Acción</span><select value={formRegla.accion} onChange={(evento) => setFormRegla((actual) => ({ ...actual, accion: evento.target.value }))}><option value="mantener">Mantener</option><option value="aumentar">Aumentar</option><option value="reducir">Reducir</option><option value="reforzar">Reforzar</option></select></label>
-            <label><span>Estado</span><select value={formRegla.estado} onChange={(evento) => setFormRegla((actual) => ({ ...actual, estado: evento.target.value }))}><option value="activo">Activo</option><option value="inactivo">Inactivo</option></select></label>
+            <label><span>Acción</span><ResponsiveSelect value={formRegla.accion} onChange={(evento) => setFormRegla((actual) => ({ ...actual, accion: evento.target.value }))}><option value="mantener">Mantener</option><option value="aumentar">Aumentar</option><option value="reducir">Reducir</option><option value="reforzar">Reforzar</option></ResponsiveSelect></label>
+            <label><span>Estado</span><ResponsiveSelect value={formRegla.estado} onChange={(evento) => setFormRegla((actual) => ({ ...actual, estado: evento.target.value }))}><option value="activo">Activo</option><option value="inactivo">Inactivo</option></ResponsiveSelect></label>
             <label className="admin-form-wide"><span>Descripción</span><input value={formRegla.descripcion} onChange={(evento) => setFormRegla((actual) => ({ ...actual, descripcion: evento.target.value }))} /></label>
             <label className="admin-form-wide"><span>Parametros JSON</span><textarea rows={6} value={formRegla.parametros_json} onChange={(evento) => setFormRegla((actual) => ({ ...actual, parametros_json: evento.target.value }))} /></label>
             <div className="form-actions admin-form-wide">
@@ -628,17 +645,17 @@ const AdminPage = () => {
               onChange={(evento) => setFiltroAuditoria((actual) => ({ ...actual, entidad: evento.target.value }))}
               placeholder="Entidad exacta"
             />
-            <select value={filtroAuditoria.resultado} onChange={(evento) => setFiltroAuditoria((actual) => ({ ...actual, resultado: evento.target.value }))}>
+            <ResponsiveSelect value={filtroAuditoria.resultado} onChange={(evento) => setFiltroAuditoria((actual) => ({ ...actual, resultado: evento.target.value }))}>
               <option value="">Todos los resultados</option>
               <option value="exitoso">Exitoso</option>
               <option value="fallido">Fallido</option>
-            </select>
-            <select value={filtroAuditoria.limite} onChange={(evento) => setFiltroAuditoria((actual) => ({ ...actual, limite: Number(evento.target.value) }))}>
+            </ResponsiveSelect>
+            <ResponsiveSelect value={filtroAuditoria.limite} onChange={(evento) => setFiltroAuditoria((actual) => ({ ...actual, limite: Number(evento.target.value) }))}>
               <option value={50}>50</option>
               <option value={100}>100</option>
               <option value={200}>200</option>
               <option value={300}>300</option>
-            </select>
+            </ResponsiveSelect>
             <button type="submit">Filtrar</button>
           </form>
           {auditoria.length === 0 ? (
@@ -684,90 +701,91 @@ const AdminPage = () => {
           <form className="admin-filter-form report-filter-form" onSubmit={aplicarFiltroReporte}>
             <label>
               <span>Modalidad</span>
-              <select name="modalidad" value={filtroReporte.modalidad} onChange={cambiarFiltroReporte}>
+              <ResponsiveSelect name="modalidad" value={filtroReporte.modalidad} onChange={cambiarFiltroReporte}>
                 <option value="">Todas</option>
                 <option value="institucional">Institucional</option>
                 <option value="independiente">Independiente</option>
-              </select>
+              </ResponsiveSelect>
             </label>
             <label>
               <span>Institución</span>
-              <select name="id_institucion" value={filtroReporte.id_institucion} onChange={cambiarFiltroReporte} disabled={filtroReporte.modalidad === "independiente"}>
+              <ResponsiveSelect name="id_institucion" value={filtroReporte.id_institucion} onChange={cambiarFiltroReporte} disabled={filtroReporte.modalidad === "independiente"}>
                 <option value="">Todas</option>
                 {catalogosReporte.instituciones.map((institucion) => (
                   <option key={institucion.id_institucion} value={institucion.id_institucion}>{institucion.nombre}</option>
                 ))}
-              </select>
+              </ResponsiveSelect>
             </label>
             <label>
               <span>Grado base</span>
-              <select name="id_grado_base" value={filtroReporte.id_grado_base} onChange={cambiarFiltroReporte}>
+              <ResponsiveSelect name="id_grado_base" value={filtroReporte.id_grado_base} onChange={cambiarFiltroReporte}>
                 <option value="">Todos</option>
                 {catalogosReporte.grados_base.map((grado) => (
                   <option key={grado.id_grado_base} value={grado.id_grado_base}>{grado.nombre_grado}</option>
                 ))}
-              </select>
+              </ResponsiveSelect>
             </label>
             <label>
               <span>Grado institucional</span>
-              <select name="id_institucion_grado" value={filtroReporte.id_institucion_grado} onChange={cambiarFiltroReporte} disabled={filtroReporte.modalidad === "independiente"}>
+              <ResponsiveSelect name="id_institucion_grado" value={filtroReporte.id_institucion_grado} onChange={cambiarFiltroReporte} disabled={filtroReporte.modalidad === "independiente"}>
                 <option value="">Todos</option>
                 {catalogosReporte.grados_institucionales.map((grado) => (
                   <option key={grado.id_institucion_grado} value={grado.id_institucion_grado}>
                     {grado.institucion} - {grado.nombre_grado}
                   </option>
                 ))}
-              </select>
+              </ResponsiveSelect>
             </label>
             <label>
               <span>Sección</span>
-              <select name="id_seccion" value={filtroReporte.id_seccion} onChange={cambiarFiltroReporte} disabled={filtroReporte.modalidad === "independiente"}>
+              <ResponsiveSelect name="id_seccion" value={filtroReporte.id_seccion} onChange={cambiarFiltroReporte} disabled={filtroReporte.modalidad === "independiente"}>
                 <option value="">Todas</option>
                 {catalogosReporte.secciones.map((seccion) => (
                   <option key={seccion.id_seccion} value={seccion.id_seccion}>{seccion.nombre_seccion}</option>
                 ))}
-              </select>
+              </ResponsiveSelect>
             </label>
             <label>
               <span>Docente</span>
-              <select name="id_docente" value={filtroReporte.id_docente} onChange={cambiarFiltroReporte} disabled={filtroReporte.modalidad === "independiente"}>
+              <ResponsiveSelect name="id_docente" value={filtroReporte.id_docente} onChange={cambiarFiltroReporte} disabled={filtroReporte.modalidad === "independiente"}>
                 <option value="">Todos</option>
                 {catalogosReporte.docentes.map((docente) => (
                   <option key={docente.id_docente} value={docente.id_docente}>{docente.docente}</option>
                 ))}
-              </select>
+              </ResponsiveSelect>
             </label>
             <label>
               <span>Estudiante</span>
-              <select name="id_estudiante" value={filtroReporte.id_estudiante} onChange={cambiarFiltroReporte}>
+              <ResponsiveSelect name="id_estudiante" value={filtroReporte.id_estudiante} onChange={cambiarFiltroReporte}>
                 <option value="">Todos</option>
                 {catalogosReporte.estudiantes.map((estudiante) => (
                   <option key={estudiante.id_estudiante} value={estudiante.id_estudiante}>{estudiante.estudiante}</option>
                 ))}
-              </select>
+              </ResponsiveSelect>
             </label>
             <label>
               <span>Tema</span>
-              <select name="id_tema" value={filtroReporte.id_tema} onChange={cambiarFiltroReporte}>
+              <ResponsiveSelect name="id_tema" value={filtroReporte.id_tema} onChange={cambiarFiltroReporte}>
                 <option value="">Todos</option>
                 {catalogosReporte.temas.map((tema) => (
                   <option key={tema.id_tema} value={tema.id_tema}>{formatLabel(tema.nombre_tema)}</option>
                 ))}
-              </select>
+              </ResponsiveSelect>
             </label>
             <label>
               <span>Asignación</span>
-              <select name="id_asignacion" value={filtroReporte.id_asignacion} onChange={cambiarFiltroReporte} disabled={filtroReporte.modalidad === "independiente"}>
+              <ResponsiveSelect name="id_asignacion" value={filtroReporte.id_asignacion} onChange={cambiarFiltroReporte} disabled={filtroReporte.modalidad === "independiente"}>
                 <option value="">Todas</option>
                 {catalogosReporte.asignaciones.map((asignacion) => (
                   <option key={asignacion.id_asignacion} value={asignacion.id_asignacion}>{asignacion.nombre}</option>
                 ))}
-              </select>
+              </ResponsiveSelect>
             </label>
             <label><span>Desde</span><input name="fecha_inicio" type="datetime-local" value={filtroReporte.fecha_inicio} onChange={cambiarFiltroReporte} /></label>
             <label><span>Hasta</span><input name="fecha_fin" type="datetime-local" value={filtroReporte.fecha_fin} onChange={cambiarFiltroReporte} /></label>
             <button type="submit">Aplicar</button>
           </form>
+          <ReportExportButtons cargando={exportando} onExportar={exportarReporteInstitucional} />
 
           {reporteAdmin?.resumen && (
             <div className="admin-role-grid">
