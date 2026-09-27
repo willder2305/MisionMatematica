@@ -180,7 +180,7 @@ def obtener_o_crear_estado_personal(id_usuario, id_tema_solicitado, cursor, bloq
     return _estado_personal(id_usuario, solicitado["nombre_tema"], cursor, bloquear)
 
 
-def _estado_asignacion(id_usuario, id_asignacion, id_tema, id_grado, cursor, bloquear=False):
+def _estado_asignacion(id_usuario, id_asignacion, id_tema, id_grado, cursor, id_nivel_inicial=None, bloquear=False):
     cursor.execute(f"""
         SELECT pat.*, n.codigo AS codigo_nivel, n.nombre AS nombre_nivel, n.orden_nivel
         FROM progreso_asignacion_tema_estudiante pat
@@ -191,18 +191,18 @@ def _estado_asignacion(id_usuario, id_asignacion, id_tema, id_grado, cursor, blo
     estado = cursor.fetchone()
     if estado:
         return estado
-    nivel = _nivel_inicial(cursor)
+    nivel_inicial = id_nivel_inicial or _nivel_inicial(cursor)["id_nivel"]
     cursor.execute("""
         INSERT INTO progreso_asignacion_tema_estudiante
             (id_asignacion, id_estudiante, id_tema, id_grado_asignacion, id_nivel_actual)
         VALUES (%s, %s, %s, %s, %s)
-    """, (id_asignacion, id_usuario, id_tema, id_grado, nivel["id_nivel"]))
-    return _estado_asignacion(id_usuario, id_asignacion, id_tema, id_grado, cursor, bloquear)
+    """, (id_asignacion, id_usuario, id_tema, id_grado, nivel_inicial))
+    return _estado_asignacion(id_usuario, id_asignacion, id_tema, id_grado, cursor, id_nivel_inicial, bloquear)
 
 
-def obtener_estado_asignacion(id_usuario, id_asignacion, id_tema, id_grado, cursor, bloquear=False):
+def obtener_estado_asignacion(id_usuario, id_asignacion, id_tema, id_grado, cursor, id_nivel_inicial=None, bloquear=False):
     # El grado proviene de la asignación, nunca del perfil ni del progreso personal.
-    return _estado_asignacion(id_usuario, id_asignacion, id_tema, id_grado, cursor, bloquear)
+    return _estado_asignacion(id_usuario, id_asignacion, id_tema, id_grado, cursor, id_nivel_inicial, bloquear)
 
 
 def evaluar_progresion_personal(estado, nivel_actual, codigo_grado, resultados_recientes=None):

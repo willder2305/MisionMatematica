@@ -119,6 +119,37 @@ def asegurar_estudiante_asignacion(id_asignacion, id_estudiante, cursor):
     )
 
 
+def obtener_avance_asignacion_estudiante(id_asignacion, id_estudiante, cursor):
+    # Calcula los aciertos acumulados desde intentos para conservar reintentos y reanudaciones.
+    cursor.execute(
+        """
+        SELECT COALESCE(SUM(i.es_correcta = 1), 0) AS correctas
+        FROM partidas_juego p
+        INNER JOIN intentos_juego i ON i.id_partida = p.id_partida
+        WHERE p.id_asignacion = %s
+          AND p.id_usuario = %s
+        """,
+        (id_asignacion, id_estudiante),
+    )
+    return min(int((cursor.fetchone() or {}).get("correctas") or 0), 10)
+
+
+def bloquear_estado_asignacion_estudiante(id_asignacion, id_estudiante, cursor):
+    # Serializa respuestas concurrentes para que una actividad no supere diez aciertos.
+    asegurar_estudiante_asignacion(id_asignacion, id_estudiante, cursor)
+    cursor.execute(
+        """
+        SELECT estado
+        FROM estudiante_asignaciones
+        WHERE id_asignacion = %s
+          AND id_estudiante = %s
+        FOR UPDATE
+        """,
+        (id_asignacion, id_estudiante),
+    )
+    return cursor.fetchone() or {}
+
+
 def registrar_inicio_asignacion_estudiante(id_asignacion, id_estudiante, id_partida, cursor):
     # Marca el intento de actividad como en progreso e incrementa cantidad_intentos.
     if not id_asignacion:
@@ -140,11 +171,11 @@ def registrar_inicio_asignacion_estudiante(id_asignacion, id_estudiante, id_part
 
 
 def registrar_cierre_partida_asignada(id_asignacion, id_estudiante, id_partida, estado_partida, total_correctos, casilla_actual, cursor):
-    # Completa solo si la partida termino el recorrido; perder o salir conserva en progreso.
+    # Completa con diez aciertos acumulados; perder o salir conserva el avance pendiente.
     if not id_asignacion:
         return
     asegurar_estudiante_asignacion(id_asignacion, id_estudiante, cursor)
-    if estado_partida == "completada" and total_correctos >= 10 and casilla_actual >= 10:
+    if total_correctos >= 10 and casilla_actual >= 10:
         cursor.execute(
             """
             UPDATE estudiante_asignaciones
@@ -193,12 +224,12 @@ def _asignacion_por_id(id_asignacion, cursor):
                      AND pe.id_seccion = a.id_seccion
                ) AS total_estudiantes
         FROM asignaciones a
-        INNER JOIN institucion_grados ig ON ig.id_institucion_grado = a.id_institucion_grado
-        INNER JOIN instituciones i ON i.id_institucion = ig.id_institucion
-        INNER JOIN grados g ON g.id_grado = ig.id_grado_base
+        LEFT JOIN institucion_grados ig ON ig.id_institucion_grado = a.id_institucion_grado
+        LEFT JOIN instituciones i ON i.id_institucion = ig.id_institucion
+        LEFT JOIN grados g ON g.id_grado = ig.id_grado_base
         INNER JOIN niveles_dificultad n ON n.id_nivel = a.id_nivel_inicial
         INNER JOIN usuarios u ON u.id_usuario = a.id_docente
-        INNER JOIN secciones s ON s.id_seccion = a.id_seccion
+        LEFT JOIN secciones s ON s.id_seccion = a.id_seccion
         WHERE a.id_asignacion = %s
         """,
         (id_asignacion,),
@@ -221,6 +252,44 @@ def _temas_asignacion(id_asignacion, cursor):
         (id_asignacion,),
     )
     return [_serializar_tema(fila) for fila in cursor.fetchall()]
+
+
+def planificar_temas_asignacion(ids_tema, total_preguntas=10):
+    """Reparte los aciertos de una actividad y alterna sus temas de forma estable."""
+    temas = list(dict.fromkeys(ids_tema))
+    if not temas or len(temas) > total_preguntas:
+        return []
+
+    base, restantes = divmod(total_preguntas, len(temas))
+    cupos = [base + (1 if indice < restantes else 0) for indice in range(len(temas))]
+    plan = []
+    while len(plan) < total_preguntas:
+        for indice, id_tema in enumerate(temas):
+            if cupos[indice] > 0:
+                plan.append(id_tema)
+                cupos[indice] -= 1
+    return plan
+
+
+def obtener_tema_programado_asignacion(id_asignacion, aciertos_actuales, cursor):
+    """Devuelve el tema que corresponde al siguiente acierto sin aceptar control del cliente."""
+    cursor.execute(
+        """
+        SELECT at.id_tema
+        FROM asignacion_temas at
+        INNER JOIN asignaciones a ON a.id_asignacion = at.id_asignacion
+        INNER JOIN institucion_grados ig ON ig.id_institucion_grado = a.id_institucion_grado
+        INNER JOIN temas t ON t.id_tema = at.id_tema
+        WHERE at.id_asignacion = %s
+          AND at.estado = 'activo'
+          AND t.estado = 'activo'
+          AND t.id_grado = ig.id_grado_base
+        ORDER BY at.id_asignacion_tema ASC
+        """,
+        (id_asignacion,),
+    )
+    plan = planificar_temas_asignacion([fila["id_tema"] for fila in cursor.fetchall()])
+    return plan[aciertos_actuales] if 0 <= aciertos_actuales < len(plan) else None
 
 
 def _ejercicios_asignacion(id_asignacion, cursor, incluir_respuestas=False):
@@ -372,6 +441,8 @@ def _validar_payload(datos, contexto, cursor):
         errores["fecha_limite"] = "La fecha limite debe ser posterior al inicio."
     if id_nivel_inicial and not _validar_nivel(id_nivel_inicial, cursor):
         errores["id_nivel_inicial"] = "Nivel inactivo o inexistente."
+    if len(ids_tema) > 10:
+        errores["temas"] = "Una actividad puede incluir como máximo 10 temas porque contiene 10 ejercicios."
     if "temas" not in errores and not _validar_temas(ids_tema, contexto["id_grado_base"], cursor):
         errores["temas"] = "Los temas deben estar activos y pertenecer al grado seleccionado."
     if tipo == "ejercicios_especificos" and "ejercicios" not in errores:
@@ -716,11 +787,24 @@ def listar_asignaciones_estudiante(usuario):
             return "no_autorizado", "Las actividades solo están disponibles para estudiantes de grupo educativo.", None, {}
         cursor.execute(
             """
-            SELECT DISTINCT a.id_asignacion
+            SELECT a.id_asignacion
             FROM perfiles_estudiante pe
             INNER JOIN asignaciones a
-                ON a.id_institucion_grado = pe.id_institucion_grado
-               AND a.id_seccion = pe.id_seccion
+                ON (
+                    a.id_institucion_grado = pe.id_institucion_grado
+                    AND a.id_seccion = pe.id_seccion
+                )
+                OR (
+                    a.id_grupo IS NOT NULL
+                    AND EXISTS (
+                        SELECT 1
+                        FROM estudiantes_grupos eg
+                        WHERE eg.id_usuario_estudiante = pe.id_usuario
+                          AND eg.id_grupo = a.id_grupo
+                          AND eg.estado = 'activo'
+                          AND (a.id_seccion IS NULL OR eg.id_seccion = a.id_seccion)
+                    )
+                )
             LEFT JOIN estudiante_asignaciones ea
                 ON ea.id_asignacion = a.id_asignacion
                AND ea.id_estudiante = pe.id_usuario
@@ -766,6 +850,11 @@ def listar_asignaciones_estudiante(usuario):
             asignacion["fecha_completada_estudiante"] = _serializar_fecha(progreso.get("fecha_completada"))
             asignacion["cantidad_intentos_estudiante"] = int(progreso.get("cantidad_intentos") or 0)
             asignacion["ultima_partida_estudiante"] = progreso.get("ultima_partida")
+            asignacion["progreso_correctas"] = obtener_avance_asignacion_estudiante(
+                fila["id_asignacion"], usuario["id_usuario"], cursor
+            )
+            asignacion["completada"] = asignacion["estado_estudiante"] == "completada"
+            asignacion["puede_continuar"] = not asignacion["completada"]
             asignaciones.append(asignacion)
         conexion.commit()
         return "consultado", "Actividades consultadas correctamente.", asignaciones, {}
@@ -805,19 +894,20 @@ def validar_asignacion_estudiante(id_usuario, id_asignacion, id_tema, cursor):
         return False, "La asignación no está disponible para este estudiante.", None, {"id_asignacion": "Asignación no disponible."}
     if asignacion.get("estado_estudiante") == "completada":
         return False, "La actividad ya fue completada por este estudiante.", None, {"id_asignacion": "Actividad completada."}
-    cursor.execute(
-        """
-        SELECT 1
-        FROM asignacion_temas at
-        INNER JOIN temas t ON t.id_tema = at.id_tema
-        WHERE at.id_asignacion = %s
-          AND at.id_tema = %s
-          AND at.estado = 'activo'
-          AND t.estado = 'activo'
-          AND t.id_grado = %s
-        """,
-        (id_asignacion, id_tema, asignacion["id_grado"]),
-    )
-    if not cursor.fetchone():
-        return False, "El tema no pertenece a la asignación seleccionada.", None, {"id_tema": "Tema fuera de asignación."}
+    if id_tema is not None:
+        cursor.execute(
+            """
+            SELECT 1
+            FROM asignacion_temas at
+            INNER JOIN temas t ON t.id_tema = at.id_tema
+            WHERE at.id_asignacion = %s
+              AND at.id_tema = %s
+              AND at.estado = 'activo'
+              AND t.estado = 'activo'
+              AND t.id_grado = %s
+            """,
+            (id_asignacion, id_tema, asignacion["id_grado"]),
+        )
+        if not cursor.fetchone():
+            return False, "El tema no pertenece a la asignación seleccionada.", None, {"id_tema": "Tema fuera de asignación."}
     return True, "", asignacion, {}

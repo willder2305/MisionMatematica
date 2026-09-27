@@ -37,6 +37,12 @@ La dificultad cambia con las reglas adaptativas existentes. La promocion curricu
 
 Una actividad toma grado y temas de `asignaciones` e `institucion_grados`. Su estado vive en `progreso_asignacion_tema_estudiante`, identificado por estudiante, asignacion y tema. El agente puede cambiar solo `Facil`, `Intermedio` y `Dificil` dentro del grado asignado; nunca promueve ni desciende el grado de una actividad.
 
+Las actividades institucionales se muestran únicamente cuando el estudiante pertenece a la misma institución, grado institucional y sección de una asignación activa y vigente. Las asignaciones históricas con `id_grupo` todavía se pueden leer si el estudiante conserva esa membresía legacy, pero las nuevas usan exclusivamente el contexto institucional.
+
+Cada actividad requiere diez respuestas correctas acumuladas, incluso si el estudiante sale o pierde una partida. Puede incluir de uno a diez temas activos del grado asignado: el backend reparte los diez cupos con `base = 10 // temas` y distribuye el resto de forma estable, alternando temas siempre que sea posible. Los errores no consumen cupos; el tema de cada pregunta se decide en backend con los intentos correctos persistidos, por lo que React no puede imponerlo ni cambiarlo al recargar.
+
+La respuesta de `GET /api/estudiante/asignaciones` incluye `temas` como lista, `progreso_correctas`, `puede_continuar` y `completada`. Una actividad se oculta al alcanzar diez aciertos. El listado evita `SELECT DISTINCT` con orden por columnas externas, incompatibilidad que MySQL 8.4 rechazaba con el error 3065.
+
 `partidas_juego.tipo_contexto` y `decisiones_agente.tipo_contexto` registran `personal` o `asignacion`. La migracion `database/actualizar_contextos_progresion_curricular.sql` clasifica el historial por `id_asignacion`, conserva las tablas antiguas y registra en `incidencias_contexto_progresion` los agregados por tema donde los dos contextos estaban mezclados, sin inferir un estado nuevo. Se incluye desde `init_database.sql`.
 
 Los reportes docentes usan solo partidas `asignacion`; el juego personal no se presenta como una nota. El administrador conserva acceso al historial de ambos contextos mediante la columna de contexto.

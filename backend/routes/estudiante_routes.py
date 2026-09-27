@@ -1,3 +1,5 @@
+import logging
+
 from flask import Blueprint, jsonify, request
 from mysql.connector import Error
 
@@ -19,6 +21,7 @@ from services.personalizacion_service import (
 
 
 estudiante_bp = Blueprint("estudiante_bp", __name__, url_prefix="/api/estudiante")
+logger = logging.getLogger(__name__)
 
 
 def _codigo_http(codigo):
@@ -98,6 +101,7 @@ def asignaciones():
     try:
         return _respuesta(*listar_asignaciones_estudiante(usuario_actual()))
     except Error:
+        logger.exception("Error MySQL al listar asignaciones del estudiante")
         return _error_servidor()
 
 

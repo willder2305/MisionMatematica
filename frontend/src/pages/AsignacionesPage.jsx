@@ -100,13 +100,17 @@ const AsignacionesPage = () => {
   };
 
   const alternarTema = (idTema) => {
-    // Agrega o quita temas de la asignacion.
-    setFormulario((actual) => ({
-      ...actual,
-      temas: actual.temas.includes(idTema)
-        ? actual.temas.filter((id) => id !== idTema)
-        : [...actual.temas, idTema],
-    }));
+    // Mantiene entre uno y diez temas para que los diez aciertos puedan repartirse.
+    if (!formulario.temas.includes(idTema) && formulario.temas.length >= 10) {
+      setMensaje({ tipo: "error", texto: "Una actividad puede incluir como máximo 10 temas porque contiene 10 ejercicios." });
+      return;
+    }
+    setFormulario((actual) => {
+      if (actual.temas.includes(idTema)) {
+        return { ...actual, temas: actual.temas.filter((id) => id !== idTema) };
+      }
+      return { ...actual, temas: [...actual.temas, idTema] };
+    });
   };
 
   const prepararPayload = () => ({
@@ -247,7 +251,7 @@ const AsignacionesPage = () => {
             <textarea name="instrucciones" value={formulario.instrucciones} onChange={cambiarCampo} rows={3} maxLength={500} />
           </label>
           <div className="template-form-wide assignment-topic-list">
-            <strong>Temas</strong>
+            <strong>Temas (1 a 10)</strong>
             {temas.map((tema) => (
               <label key={tema.id_tema} className="check-row">
                 <input

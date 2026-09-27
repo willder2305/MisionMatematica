@@ -16,6 +16,9 @@ from mysql.connector import IntegrityError
 from agent.motor_reglas import MotorReglasAdaptativo
 from db import obtener_conexion
 from services.asignaciones_service import (
+    bloquear_estado_asignacion_estudiante,
+    obtener_avance_asignacion_estudiante,
+    obtener_tema_programado_asignacion,
     registrar_cierre_partida_asignada,
     registrar_inicio_asignacion_estudiante,
     validar_asignacion_estudiante,
@@ -289,28 +292,6 @@ def _obtener_nivel_asignacion_o_progreso(id_usuario, id_tema, asignacion, cursor
     return _obtener_nivel_inicial(cursor)
 
 
-def _primer_tema_asignacion(id_asignacion, cursor):
-    # Permite iniciar una actividad sin que el estudiante seleccione tema manualmente.
-    cursor.execute(
-        """
-        SELECT t.id_tema
-        FROM asignacion_temas at
-        INNER JOIN asignaciones a ON a.id_asignacion = at.id_asignacion
-        INNER JOIN institucion_grados ig ON ig.id_institucion_grado = a.id_institucion_grado
-        INNER JOIN temas t ON t.id_tema = at.id_tema
-        WHERE at.id_asignacion = %s
-          AND at.estado = 'activo'
-          AND t.estado = 'activo'
-          AND t.id_grado = ig.id_grado_base
-        ORDER BY t.nombre_tema ASC, t.id_tema ASC
-        LIMIT 1
-        """,
-        (id_asignacion,),
-    )
-    fila = cursor.fetchone()
-    return fila["id_tema"] if fila else None
-
-
 def _grado_curricular_independiente(id_usuario, nombre_tema, perfil, cursor):
     # Determina el grado curricular interno del tema sin aceptar grado desde el cliente.
     cursor.execute(
@@ -380,19 +361,24 @@ def _resolver_contexto_juego(datos_limpios, cursor):
         }
 
     if datos_limpios["id_asignacion"]:
-        id_tema = datos_limpios["id_tema"] or _primer_tema_asignacion(datos_limpios["id_asignacion"], cursor)
-        if not id_tema:
-            return None, "datos_invalidos", "La asignación no tiene temas activos.", {"id_tema": "Tema requerido."}
+        # La actividad ignora el tema recibido: el plan institucional controla su secuencia.
         asignacion_ok, mensaje, asignacion, errores = validar_asignacion_estudiante(
             datos_limpios["id_usuario"],
             datos_limpios["id_asignacion"],
-            id_tema,
+            None,
             cursor,
         )
         if not asignacion_ok:
             return None, "no_autorizado", mensaje, errores
+        aciertos_acumulados = obtener_avance_asignacion_estudiante(
+            datos_limpios["id_asignacion"], datos_limpios["id_usuario"], cursor
+        )
+        id_tema = obtener_tema_programado_asignacion(datos_limpios["id_asignacion"], aciertos_acumulados, cursor)
+        if not id_tema:
+            return None, "datos_invalidos", "La asignación no tiene temas activos pendientes.", {"id_tema": "Tema requerido."}
         estado_asignacion = obtener_estado_asignacion(
-            datos_limpios["id_usuario"], datos_limpios["id_asignacion"], id_tema, asignacion["id_grado"], cursor
+            datos_limpios["id_usuario"], datos_limpios["id_asignacion"], id_tema, asignacion["id_grado"], cursor,
+            asignacion.get("id_nivel_inicial"),
         )
         return {
             "id_grado": asignacion["id_grado"],
@@ -401,6 +387,7 @@ def _resolver_contexto_juego(datos_limpios, cursor):
             "perfil": perfil,
             "asignacion": asignacion,
             "tipo_contexto": "asignacion",
+            "aciertos_acumulados": aciertos_acumulados,
         }, None, None, None
 
     if not datos_limpios["id_tema"]:
@@ -627,7 +614,7 @@ def iniciar_partida_adaptativa(datos):
                  id_ejercicio_generado_actual, personaje, mapa, casilla_actual, total_correctos, total_errores, vidas_iniciales,
                  vidas_restantes, preguntas_respondidas, estado, fecha_ultima_actividad)
             VALUES
-                (%s, %s, %s, %s, %s, %s, %s, %s, NULL, NULL, %s, %s, 0, 0, 0, %s, %s, 0, 'en_curso', CURRENT_TIMESTAMP)
+                (%s, %s, %s, %s, %s, %s, %s, %s, NULL, NULL, %s, %s, %s, %s, 0, %s, %s, 0, 'en_curso', CURRENT_TIMESTAMP)
             """,
             (
                 datos_limpios["id_usuario"],
@@ -640,6 +627,8 @@ def iniciar_partida_adaptativa(datos):
                 nivel_inicial["id_nivel"],
                 personaje_partida,
                 mapa_partida,
+                contexto.get("aciertos_acumulados", 0),
+                contexto.get("aciertos_acumulados", 0),
                 VIDAS_INICIALES,
                 VIDAS_INICIALES,
             ),
@@ -757,24 +746,44 @@ def _obtener_metricas(partida, cursor):
     Las actividades mantienen su propio historial y el juego personal no mezcla
     resultados de otros temas ni grados curriculares.
     """
-    cursor.execute(
-        """
-        SELECT i.id_intento, i.es_correcta, i.tiempo_respuesta_ms
-        FROM intentos_juego i
-        INNER JOIN partidas_juego p ON p.id_partida = i.id_partida
-        WHERE p.id_usuario = %s
-          AND p.tipo_contexto = %s
-          AND p.id_grado = %s
-          AND p.id_tema = %s
-          AND i.nivel_al_responder = %s
-        ORDER BY i.id_intento DESC
-        LIMIT 8
-        """,
-        (
-            partida["id_usuario"], partida.get("tipo_contexto") or "personal", partida["id_grado"],
-            partida["id_tema"], partida["id_nivel_actual"],
-        ),
-    )
+    if partida.get("tipo_contexto") == "asignacion":
+        # El tema de un intento asignado se conserva en su ejercicio, aunque la partida avance a otro tema.
+        cursor.execute(
+            """
+            SELECT i.id_intento, i.es_correcta, i.tiempo_respuesta_ms
+            FROM intentos_juego i
+            INNER JOIN partidas_juego p ON p.id_partida = i.id_partida
+            LEFT JOIN ejercicios e ON e.id_ejercicio = i.id_ejercicio
+            LEFT JOIN ejercicios_generados eg ON eg.id_ejercicio_generado = i.id_ejercicio_generado
+            WHERE p.id_usuario = %s
+              AND p.tipo_contexto = 'asignacion'
+              AND p.id_grado = %s
+              AND COALESCE(eg.id_tema, e.id_tema) = %s
+              AND i.nivel_al_responder = %s
+            ORDER BY i.id_intento DESC
+            LIMIT 8
+            """,
+            (partida["id_usuario"], partida["id_grado"], partida["id_tema"], partida["id_nivel_actual"]),
+        )
+    else:
+        cursor.execute(
+            """
+            SELECT i.id_intento, i.es_correcta, i.tiempo_respuesta_ms
+            FROM intentos_juego i
+            INNER JOIN partidas_juego p ON p.id_partida = i.id_partida
+            WHERE p.id_usuario = %s
+              AND p.tipo_contexto = %s
+              AND p.id_grado = %s
+              AND p.id_tema = %s
+              AND i.nivel_al_responder = %s
+            ORDER BY i.id_intento DESC
+            LIMIT 8
+            """,
+            (
+                partida["id_usuario"], partida.get("tipo_contexto") or "personal", partida["id_grado"],
+                partida["id_tema"], partida["id_nivel_actual"],
+            ),
+        )
     intentos = cursor.fetchall()
     intentos.reverse()
     total = len(intentos)
@@ -963,6 +972,42 @@ def _generar_siguiente_pregunta_partida(partida, id_nivel, cursor):
     )
 
 
+def _nivel_inicial_asignacion(id_asignacion, cursor):
+    # Recupera el nivel fijado por el docente para inicializar un tema aún no practicado.
+    cursor.execute(
+        "SELECT id_nivel_inicial FROM asignaciones WHERE id_asignacion = %s",
+        (id_asignacion,),
+    )
+    fila = cursor.fetchone() or {}
+    return fila.get("id_nivel_inicial")
+
+
+def _contexto_siguiente_asignacion(partida, estado_contextual, total_correctos, estado_partida, cursor):
+    # Cambia de tema solo después de acertar y mantiene el grado institucional fijo.
+    if partida.get("tipo_contexto") != "asignacion" or estado_partida != "en_curso":
+        return estado_contextual
+    id_tema_siguiente = obtener_tema_programado_asignacion(partida["id_asignacion"], total_correctos, cursor)
+    if not id_tema_siguiente:
+        raise RuntimeError("La asignación no tiene un tema programado para el siguiente ejercicio.")
+    if id_tema_siguiente == partida["id_tema"]:
+        return estado_contextual
+
+    estado_siguiente = obtener_estado_asignacion(
+        partida["id_usuario"],
+        partida["id_asignacion"],
+        id_tema_siguiente,
+        partida["id_grado"],
+        cursor,
+        _nivel_inicial_asignacion(partida["id_asignacion"], cursor),
+    )
+    return {
+        **estado_contextual,
+        "id_grado": partida["id_grado"],
+        "id_tema": id_tema_siguiente,
+        "id_nivel": estado_siguiente["id_nivel_actual"],
+    }
+
+
 def continuar_partida_adaptativa(id_partida, datos, id_usuario_autenticado):
     """Resta una moneda una sola vez y reactiva la misma partida desde su casilla actual."""
     request_id = str((datos or {}).get("request_id") or "").strip()
@@ -1098,6 +1143,17 @@ def responder_partida_adaptativa(id_partida, datos, id_usuario_autenticado):
         if partida["estado"] != "en_curso":
             return "estado_incompatible", "La partida ya ha finalizado.", {"partida": serializar_partida(partida)}, {}
 
+        aciertos_acumulados = int(partida["total_correctos"] or 0)
+        if partida.get("tipo_contexto") == "asignacion":
+            estado_asignacion = bloquear_estado_asignacion_estudiante(
+                partida["id_asignacion"], partida["id_usuario"], cursor
+            )
+            if estado_asignacion.get("estado") == "completada":
+                return "estado_incompatible", "La actividad ya fue completada.", {"partida": serializar_partida(partida)}, {}
+            aciertos_acumulados = obtener_avance_asignacion_estudiante(
+                partida["id_asignacion"], partida["id_usuario"], cursor
+            )
+
         ejercicio = None
         id_ejercicio_intento = None
         id_ejercicio_generado_intento = None
@@ -1119,7 +1175,7 @@ def responder_partida_adaptativa(id_partida, datos, id_usuario_autenticado):
         es_correcta = _evaluar_respuesta(ejercicio, datos_limpios["respuesta"])
         casilla_antes = partida["casilla_actual"]
         vidas_antes = partida["vidas_restantes"]
-        total_correctos_despues = int(partida["total_correctos"] or 0) + (1 if es_correcta else 0)
+        total_correctos_despues = aciertos_acumulados + (1 if es_correcta else 0)
         casilla_despues = min(total_correctos_despues, CASILLA_FINAL) if es_correcta else casilla_antes
         vidas_despues = vidas_antes if es_correcta else max(vidas_antes - 1, 0)
         estado = "en_curso"
@@ -1163,6 +1219,13 @@ def responder_partida_adaptativa(id_partida, datos, id_usuario_autenticado):
         estado_contextual = actualizar_progreso_contextual(
             partida, es_correcta, datos_limpios["tiempo"], decision["nivel_recomendado"], cursor
         )
+        estado_contextual = _contexto_siguiente_asignacion(
+            partida,
+            estado_contextual,
+            total_correctos_despues,
+            estado,
+            cursor,
+        )
         id_nivel_nuevo = estado_contextual["id_nivel"]
         nivel_nuevo = _obtener_nivel_por_id(id_nivel_nuevo, cursor)
         partida_contextual = {
@@ -1184,7 +1247,7 @@ def responder_partida_adaptativa(id_partida, datos, id_usuario_autenticado):
             SET id_grado = %s,
                 id_tema = %s,
                 casilla_actual = %s,
-                total_correctos = total_correctos + %s,
+                total_correctos = %s,
                 total_errores = total_errores + %s,
                 vidas_restantes = %s,
                 vidas_perdidas_total = vidas_perdidas_total + %s,
@@ -1202,7 +1265,7 @@ def responder_partida_adaptativa(id_partida, datos, id_usuario_autenticado):
                 estado_contextual["id_grado"],
                 estado_contextual["id_tema"],
                 casilla_despues,
-                1 if es_correcta else 0,
+                total_correctos_despues,
                 0 if es_correcta else 1,
                 vidas_despues,
                 0 if es_correcta else 1,
@@ -1226,7 +1289,7 @@ def responder_partida_adaptativa(id_partida, datos, id_usuario_autenticado):
             (
                 id_partida,
                 id_intento,
-                estado_contextual["id_tema"],
+                partida["id_tema"],
                 partida.get("tipo_contexto") or ("asignacion" if partida.get("id_asignacion") else "personal"),
                 partida["id_nivel_actual"],
                 id_nivel_nuevo,

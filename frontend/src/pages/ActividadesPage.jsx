@@ -34,6 +34,7 @@ const ActividadesPage = () => {
     // Obtiene actividades asignadas al estudiante autenticado.
     try {
       setCargando(true);
+      setMensaje({ tipo: "", texto: "" });
       const perfil = await obtenerOnboarding();
       if (perfil.data?.perfil?.modalidad !== "grupo_educativo") {
         navegarInternamente("/panel-estudiante", { replace: true });
@@ -42,7 +43,7 @@ const ActividadesPage = () => {
       const respuesta = await obtenerAsignacionesEstudiante();
       setAsignaciones(respuesta.data || []);
     } catch (error) {
-      setMensaje({ tipo: "error", texto: error.message });
+      setMensaje({ tipo: "error", texto: "No fue posible cargar tus actividades." });
     } finally {
       setCargando(false);
     }
@@ -63,7 +64,11 @@ const ActividadesPage = () => {
 
       <PixelAlert tipo={mensaje.tipo} texto={mensaje.texto} />
 
-      {asignaciones.length === 0 ? (
+      {mensaje.tipo === "error" ? (
+        <section className="panel">
+          <button type="button" onClick={cargarActividades}>Reintentar</button>
+        </section>
+      ) : (asignaciones.length === 0 ? (
         <section className="panel">
           <PixelEmptyState title="No hay actividades asignadas." description="Cuando tu docente publique una actividad, aparecerá aquí." />
         </section>
@@ -84,6 +89,8 @@ const ActividadesPage = () => {
                   <dd>{formatLabel(asignacion.tipo)}</dd>
                   <dt>Preguntas</dt>
                   <dd>{asignacion.cantidad_preguntas}</dd>
+                  <dt>Progreso</dt>
+                  <dd>{asignacion.progreso_correctas || 0} de 10 retos completados</dd>
                   <dt>Límite</dt>
                   <dd>{formatDateTime(asignacion.fecha_limite, "Sin límite")}</dd>
                   <dt>Partidas</dt>
@@ -101,7 +108,7 @@ const ActividadesPage = () => {
             );
           })}
         </section>
-      )}
+      ))}
     </section>
   );
 };
