@@ -1,0 +1,11 @@
+backend/.venv/
+**/__pycache__/
+*.py[cod]
+frontend/node_modules/
+frontend/dist/
+.env
+backend/.env
+.playwright-cli/
+output/playwright/
+personaje-*.png
+*.log

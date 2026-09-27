@@ -1,0 +1,18 @@
+[Unit]
+Description=API Flask de Mision Matematica
+After=network.target mariadb.service mysql.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/mision-matematica/backend
+EnvironmentFile=/etc/mision-matematica/mision-matematica.env
+ExecStart=/bin/sh /opt/mision-matematica/deploy/run-gunicorn.sh
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
