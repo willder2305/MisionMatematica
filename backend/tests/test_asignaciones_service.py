@@ -1,7 +1,8 @@
 import unittest
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
-from services.asignaciones_service import _normalizar_ids, _parse_fecha
+from services.asignaciones_service import _normalizar_ids, _parse_fecha, _validar_payload
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -39,6 +40,31 @@ class AsignacionesServiceTest(unittest.TestCase):
         self.assertNotIn("id_grupo:", codigo)
         self.assertIn("id_institucion_grado", codigo)
         self.assertIn("id_seccion", codigo)
+
+    def test_asignaciones_siempre_fijan_diez_preguntas(self):
+        codigo_backend = ASIGNACIONES_SERVICE.read_text(encoding="utf-8")
+        codigo_frontend = ASIGNACIONES_PAGE.read_text(encoding="utf-8")
+        self.assertIn("cantidad_preguntas = 10", codigo_backend)
+        self.assertIn('cantidad_preguntas: 10', codigo_frontend)
+        self.assertNotIn('name="cantidad_preguntas"', codigo_frontend)
+
+    def test_payload_manipulado_no_puede_cambiar_las_diez_preguntas(self):
+        """La validacion del servidor ignora cantidades enviadas por clientes alterados."""
+        datos = {
+            "nombre": "Actividad QA",
+            "tipo": "generacion_automatica",
+            "id_nivel_inicial": 1,
+            "cantidad_preguntas": 999,
+            "fecha_inicio": "2026-09-01T08:00",
+            "temas": [1],
+        }
+        with patch("services.asignaciones_service._validar_nivel", return_value=True), patch(
+            "services.asignaciones_service._validar_temas", return_value=True
+        ):
+            datos_limpios, errores = _validar_payload(datos, {"id_grado_base": 1}, MagicMock())
+
+        self.assertEqual(errores, {})
+        self.assertEqual(datos_limpios["cantidad_preguntas"], 10)
 
 
 if __name__ == "__main__":

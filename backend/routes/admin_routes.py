@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, send_file
 from mysql.connector import Error
 
 from services.auditoria_service import listar_auditoria_admin
@@ -22,6 +22,7 @@ from services.admin_service import (
     obtener_panel_admin,
 )
 from services.auth_context import roles_requeridos, usuario_actual
+from services.report_export_service import exportar_reporte
 
 
 admin_bp = Blueprint("admin_bp", __name__, url_prefix="/api/admin")
@@ -242,5 +243,32 @@ def reportes_filtros_admin():
 def reporte_institucional_admin():
     try:
         return _respuesta(*obtener_reporte_institucional_admin(request.args))
+    except Error:
+        return _error_servidor()
+
+
+@admin_bp.route("/reportes/institucional/exportar/<formato>", methods=["GET"])
+@roles_requeridos("administrador")
+def exportar_reporte_institucional_admin(formato):
+    """Descarga el reporte institucional filtrado sin ampliar permisos del administrador."""
+    try:
+        if formato not in ("pdf", "xlsx"):
+            return _respuesta("datos_invalidos", "Formato de exportación no permitido.", None, {})
+        codigo, mensaje, reporte, errores = obtener_reporte_institucional_admin(request.args)
+        if codigo != "consultado":
+            return _respuesta(codigo, mensaje, reporte, errores)
+        columnas = [
+            ("estudiante", "Estudiante"), ("modalidad", "Modalidad"), ("institucion", "Institución"),
+            ("docente", "Docente"), ("grado", "Grado"), ("seccion", "Sección"),
+            ("asignacion", "Asignación"), ("tema", "Tema"), ("intentos", "Intentos"),
+            ("correctos", "Correctos"), ("incorrectos", "Incorrectos"), ("precision", "Precisión"),
+            ("partidas_completadas", "Partidas"), ("nivel_actual", "Nivel"),
+            ("ultima_actividad", "Última actividad"),
+        ]
+        archivo = exportar_reporte(formato, "Reporte institucional", columnas, reporte.get("filas", []), "reporte_estudiantes")
+        if not archivo:
+            return _respuesta("datos_invalidos", "No hay datos para exportar.", None, {})
+        contenido, mimetype, nombre = archivo
+        return send_file(contenido, mimetype=mimetype, as_attachment=True, download_name=nombre)
     except Error:
         return _error_servidor()

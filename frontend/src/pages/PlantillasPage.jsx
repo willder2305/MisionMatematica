@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import ResponsiveSelect from "../components/ui/ResponsiveSelect";
 import PixelAlert from "../components/ui/PixelAlert";
 import { obtenerGrados } from "../services/gradosService";
 import { obtenerTemasPorGrado } from "../services/temasService";
@@ -203,24 +204,24 @@ const PlantillasPage = () => {
       <section className="panel">
         <h2>Filtros</h2>
         <form className="admin-filter-form" onSubmit={aplicarFiltros}>
-          <select value={filtros.grado} onChange={(evento) => setFiltros((actual) => ({ ...actual, grado: evento.target.value, tema: "" }))}>
+          <ResponsiveSelect value={filtros.grado} onChange={(evento) => setFiltros((actual) => ({ ...actual, grado: evento.target.value, tema: "" }))}>
             <option value="">Todos los grados</option>
             {grados.map((grado) => (
               <option key={grado.id_grado} value={grado.id_grado}>{grado.nombre_grado}</option>
             ))}
-          </select>
-          <select value={filtros.tema} onChange={(evento) => setFiltros((actual) => ({ ...actual, tema: evento.target.value }))} disabled={!filtros.grado}>
+          </ResponsiveSelect>
+          <ResponsiveSelect value={filtros.tema} onChange={(evento) => setFiltros((actual) => ({ ...actual, tema: evento.target.value }))} disabled={!filtros.grado}>
             <option value="">Todos los temas</option>
             {temasFiltro.map((tema) => (
               <option key={tema.id_tema} value={tema.id_tema}>{formatLabel(tema.nombre_tema)}</option>
             ))}
-          </select>
-          <select value={filtros.estado} onChange={(evento) => setFiltros((actual) => ({ ...actual, estado: evento.target.value }))}>
+          </ResponsiveSelect>
+          <ResponsiveSelect value={filtros.estado} onChange={(evento) => setFiltros((actual) => ({ ...actual, estado: evento.target.value }))}>
             <option value="">Todos los estados</option>
             <option value="borrador">Borrador</option>
             <option value="publicada">Publicada</option>
             <option value="desactivada">Desactivada</option>
-          </select>
+          </ResponsiveSelect>
           <button type="submit">Filtrar</button>
         </form>
       </section>
@@ -230,30 +231,30 @@ const PlantillasPage = () => {
         <form className="template-form" onSubmit={guardar}>
           <label>
             <span>Grado</span>
-            <select name="id_grado" value={formulario.id_grado} onChange={cambiarCampo}>
+            <ResponsiveSelect name="id_grado" value={formulario.id_grado} onChange={cambiarCampo}>
               <option value="">Seleccione</option>
               {grados.map((grado) => (
                 <option key={grado.id_grado} value={grado.id_grado}>{grado.nombre_grado}</option>
               ))}
-            </select>
+            </ResponsiveSelect>
           </label>
           <label>
             <span>Tema</span>
-            <select name="id_tema" value={formulario.id_tema} onChange={cambiarCampo}>
+            <ResponsiveSelect name="id_tema" value={formulario.id_tema} onChange={cambiarCampo}>
               <option value="">Seleccione</option>
               {temas.map((tema) => (
                 <option key={tema.id_tema} value={tema.id_tema}>{formatLabel(tema.nombre_tema)}</option>
               ))}
-            </select>
+            </ResponsiveSelect>
           </label>
           <label>
             <span>Nivel</span>
-            <select name="id_nivel" value={formulario.id_nivel} onChange={cambiarCampo}>
+            <ResponsiveSelect name="id_nivel" value={formulario.id_nivel} onChange={cambiarCampo}>
               <option value="">Seleccione</option>
               {niveles.map((nivel) => (
                 <option key={nivel.id_nivel} value={nivel.id_nivel}>{nivel.nombre}</option>
               ))}
-            </select>
+            </ResponsiveSelect>
           </label>
           <label>
             <span>Nombre</span>
@@ -261,18 +262,18 @@ const PlantillasPage = () => {
           </label>
           <label>
             <span>Tipo</span>
-            <select name="tipo_respuesta" value={formulario.tipo_respuesta} onChange={cambiarCampo}>
+            <ResponsiveSelect name="tipo_respuesta" value={formulario.tipo_respuesta} onChange={cambiarCampo}>
               <option value="seleccion_multiple">Selección múltiple</option>
               <option value="numerica">Numérica</option>
-            </select>
+            </ResponsiveSelect>
           </label>
           <label>
             <span>Estado</span>
-            <select name="estado" value={formulario.estado} onChange={cambiarCampo}>
+            <ResponsiveSelect name="estado" value={formulario.estado} onChange={cambiarCampo}>
               <option value="borrador">Borrador</option>
               <option value="publicada">Publicada</option>
               <option value="desactivada">Desactivada</option>
-            </select>
+            </ResponsiveSelect>
           </label>
           <label className="template-form-wide">
             <span>Enunciado</span>

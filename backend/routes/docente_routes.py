@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, send_file
 from mysql.connector import Error
 
 from services.auth_context import roles_requeridos, usuario_actual
@@ -8,6 +8,7 @@ from services.reportes_docente_service import (
     obtener_panel_docente,
     obtener_reporte_agente,
 )
+from services.report_export_service import exportar_reporte
 
 
 docente_bp = Blueprint("docente_bp", __name__, url_prefix="/api/docente")
@@ -76,5 +77,30 @@ def decisiones_agente():
         limite = request.args.get("limite", default=50, type=int)
         offset = request.args.get("offset", default=0, type=int)
         return _respuesta(*obtener_decisiones_agente(usuario_actual(), request.args, limite=limite, offset=offset))
+    except Error:
+        return _error_servidor()
+
+
+@docente_bp.route("/reportes/agente/exportar/<formato>", methods=["GET"])
+@roles_requeridos("docente", "administrador")
+def exportar_reporte_agente(formato):
+    """Descarga el reporte docente ya filtrado y autorizado como PDF o XLSX."""
+    try:
+        if formato not in ("pdf", "xlsx"):
+            return _respuesta("datos_invalidos", "Formato de exportación no permitido.", None, {})
+        codigo, mensaje, reporte, errores = obtener_reporte_agente(usuario_actual(), request.args)
+        if codigo != "consultado":
+            return _respuesta(codigo, mensaje, reporte, errores)
+        columnas = [
+            ("estudiante", "Estudiante"), ("grado", "Grado"), ("tema", "Tema"),
+            ("intentos", "Intentos"), ("aciertos", "Aciertos"), ("errores", "Errores"),
+            ("porcentaje_aciertos", "Porcentaje"), ("nivel_actual", "Nivel"),
+            ("ultima_practica", "Última actividad"),
+        ]
+        archivo = exportar_reporte(formato, "Reporte docente", columnas, reporte.get("temas_dificultad", []), "reporte_docente")
+        if not archivo:
+            return _respuesta("datos_invalidos", "No hay datos para exportar.", None, {})
+        contenido, mimetype, nombre = archivo
+        return send_file(contenido, mimetype=mimetype, as_attachment=True, download_name=nombre)
     except Error:
         return _error_servidor()

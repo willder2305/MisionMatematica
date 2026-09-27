@@ -41,6 +41,12 @@ Una actividad toma grado y temas de `asignaciones` e `institucion_grados`. Su es
 
 Los reportes docentes usan solo partidas `asignacion`; el juego personal no se presenta como una nota. El administrador conserva acceso al historial de ambos contextos mediante la columna de contexto.
 
+### Exportación de reportes y asignaciones
+
+Los reportes filtrados del docente y del administrador pueden descargarse en PDF o XLSX. Las rutas vuelven a consultar los datos autorizados con los filtros recibidos antes de generar el archivo; `backend/services/report_export_service.py` crea los archivos en memoria, neutraliza fórmulas de Excel y entrega nombres de descarga sin rutas internas.
+
+Las asignaciones creadas o editadas siempre guardan diez ejercicios. La interfaz ya no solicita esa cantidad y `backend/services/asignaciones_service.py` ignora cualquier valor que un cliente alterado intente enviar.
+
 ## Optimizacion y usuario QA local
 
 La aplicacion conserva el enrutamiento SPA y carga diferida por pagina. `apiClient` es la unica instancia Axios, incluye un limite de espera de 15 segundos y coordina un unico refresh de sesion para solicitudes 401 concurrentes. Los errores 403, 404 y 500 no invalidan la sesion.

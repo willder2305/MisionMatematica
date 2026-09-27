@@ -1,4 +1,5 @@
-﻿import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
+import ResponsiveSelect from "../ui/ResponsiveSelect";
 
 const estadoInicial = {
   codigo_grado: "",
@@ -247,10 +248,10 @@ const GradoForm = ({ gradoSeleccionado, guardando, erroresBackend, onGuardar, on
 
       <label>
         Estado
-        <select name="estado" value={formulario.estado} onChange={actualizarCampo}>
+        <ResponsiveSelect name="estado" value={formulario.estado} onChange={actualizarCampo}>
           <option value="activo">Activo</option>
           <option value="inactivo">Inactivo</option>
-        </select>
+        </ResponsiveSelect>
         {erroresVisibles.estado && <span className="field-error">{erroresVisibles.estado}</span>}
       </label>
 

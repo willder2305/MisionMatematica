@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import ResponsiveSelect from "../components/ui/ResponsiveSelect";
 import logoMision from "../assets/pixel/logo_mision_matematica_pixel.png";
 import { registrar } from "../services/authService";
 import { navegarInternamente } from "../services/navigationService";
@@ -59,10 +60,10 @@ const RegisterPage = () => {
         </label>
         <label>
           Tipo de usuario
-          <select name="rol" value={formulario.rol} onChange={cambiarCampo}>
+          <ResponsiveSelect name="rol" value={formulario.rol} onChange={cambiarCampo}>
             <option value="estudiante">Estudiante</option>
             <option value="docente">Docente</option>
-          </select>
+          </ResponsiveSelect>
         </label>
         <button type="submit" disabled={cargando}>{cargando ? "Creando..." : "Crear cuenta"}</button>
         <button type="button" className="auth-text-button" onClick={() => navegarInternamente("/login")}>

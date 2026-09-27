@@ -343,11 +343,8 @@ def _validar_payload(datos, contexto, cursor):
     fecha_limite = _parse_fecha(datos.get("fecha_limite"), "fecha_limite", errores)
 
     id_nivel_inicial = _normalizar_entero(datos.get("id_nivel_inicial"), "id_nivel_inicial", errores, requerido=True)
-    try:
-        cantidad_preguntas = int(datos.get("cantidad_preguntas", 10))
-    except (TypeError, ValueError):
-        cantidad_preguntas = 0
-        errores["cantidad_preguntas"] = "Ingrese una cantidad valida."
+    # La actividad siempre usa diez ejercicios; el cliente no controla esta regla.
+    cantidad_preguntas = 10
 
     try:
         ids_tema = _normalizar_ids(datos.get("temas"))
@@ -371,8 +368,6 @@ def _validar_payload(datos, contexto, cursor):
         errores["tipo"] = "Tipo de asignacion invalido."
     if estado not in ESTADOS_ASIGNACION:
         errores["estado"] = "Estado invalido."
-    if cantidad_preguntas < 1 or cantidad_preguntas > 100:
-        errores["cantidad_preguntas"] = "La cantidad debe estar entre 1 y 100."
     if fecha_inicio and fecha_limite and fecha_inicio > fecha_limite:
         errores["fecha_limite"] = "La fecha limite debe ser posterior al inicio."
     if id_nivel_inicial and not _validar_nivel(id_nivel_inicial, cursor):
