@@ -6,10 +6,9 @@ from services.progreso_service import _porcentaje, evaluar_progresion_personal
 class ProgresoServiceTest(unittest.TestCase):
     def estado_promocion(self, **cambios):
         estado = {
-            "total_intentos": 20,
+            "intentos_dificil": 12,
+            "precision_dificil": 85,
             "porcentaje_aciertos": 85,
-            "partidas_distintas": 3,
-            "racha_correctas": 6,
         }
         estado.update(cambios)
         return estado
@@ -23,24 +22,24 @@ class ProgresoServiceTest(unittest.TestCase):
 
     def test_no_promueve_con_evidencia_insuficiente(self):
         decision = evaluar_progresion_personal(
-            self.estado_promocion(total_intentos=19), {"codigo": "dificil"}, "4P"
+            self.estado_promocion(intentos_dificil=11), {"codigo": "dificil"}, "4P", [True] * 6
         )
         self.assertEqual(decision, "mantener")
 
     def test_promueve_cuarto_dificil_a_quinto_con_dominio_sostenido(self):
-        decision = evaluar_progresion_personal(self.estado_promocion(), {"codigo": "dificil"}, "4P")
+        decision = evaluar_progresion_personal(self.estado_promocion(), {"codigo": "dificil"}, "4P", [True, True, False, True, True, True])
         self.assertEqual(decision, "promover_grado")
 
     def test_promueve_quinto_dificil_a_sexto_con_dominio_sostenido(self):
-        decision = evaluar_progresion_personal(self.estado_promocion(), {"codigo": "dificil"}, "5P")
+        decision = evaluar_progresion_personal(self.estado_promocion(), {"codigo": "dificil"}, "5P", [True, True, True, True, True, False])
         self.assertEqual(decision, "promover_grado")
 
     def test_sexto_dificil_es_el_maximo_curricular(self):
-        decision = evaluar_progresion_personal(self.estado_promocion(), {"codigo": "dificil"}, "6P")
+        decision = evaluar_progresion_personal(self.estado_promocion(), {"codigo": "dificil"}, "6P", [True] * 6)
         self.assertEqual(decision, "mantener")
 
     def test_promocion_exige_dificultad_dificil(self):
-        decision = evaluar_progresion_personal(self.estado_promocion(), {"codigo": "intermedio"}, "4P")
+        decision = evaluar_progresion_personal(self.estado_promocion(), {"codigo": "intermedio"}, "4P", [True] * 6)
         self.assertEqual(decision, "mantener")
 
 

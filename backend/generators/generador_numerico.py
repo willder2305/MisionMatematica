@@ -4,6 +4,7 @@ from math import gcd
 import json
 
 from generators.restricciones_matematicas import obtener_entero, validar_variables
+from generators.contextos_regla_tres import elegir_contexto
 
 
 def _cfg(configuracion, nombre, defecto):
@@ -344,6 +345,7 @@ def generar_regla_tres(rng, configuracion, tipo):
     if a == 0 or c == 0:
         raise ValueError("Regla de tres con cero no permitida.")
     respuesta = Fraction(b * c, a) if tipo == "directa" else Fraction(a * b, c)
+    context_key, plantilla_contexto = elegir_contexto(rng, tipo)
     return {
         "a": a,
         "b": b,
@@ -351,6 +353,9 @@ def generar_regla_tres(rng, configuracion, tipo):
         "tipo_proporcion": tipo,
         "respuesta": _fraccion_texto(respuesta),
         "operacion": f"regla_tres_{tipo}",
+        "context_key": context_key,
+        "template_key": f"regla_tres_{tipo}.{context_key}",
+        "enunciado_contextual": plantilla_contexto.format(a=a, b=b, c=c),
     }
 
 

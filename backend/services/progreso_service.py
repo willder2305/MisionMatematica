@@ -4,10 +4,9 @@ from db import obtener_conexion
 
 
 PROMOCION_GRADO_CONFIG = {
-    "min_ejercicios": 20,
+    "min_ejercicios": 12,
     "min_precision": 85,
-    "min_partidas": 3,
-    "min_racha": 6,
+    "min_correctas_ultimas_seis": 5,
     "temas_representativos_catalogo": 3,
 }
 
@@ -206,19 +205,37 @@ def obtener_estado_asignacion(id_usuario, id_asignacion, id_tema, id_grado, curs
     return _estado_asignacion(id_usuario, id_asignacion, id_tema, id_grado, cursor, bloquear)
 
 
-def evaluar_progresion_personal(estado, nivel_actual, codigo_grado):
+def evaluar_progresion_personal(estado, nivel_actual, codigo_grado, resultados_recientes=None):
     """Devuelve promover_grado solo con evidencia sostenida en dificultad difícil."""
     if codigo_grado not in ("4P", "5P") or nivel_actual.get("codigo") != "dificil":
         return "mantener"
-    if int(estado.get("total_intentos") or 0) < PROMOCION_GRADO_CONFIG["min_ejercicios"]:
+    if int(estado.get("intentos_dificil", estado.get("total_intentos", 0)) or 0) < PROMOCION_GRADO_CONFIG["min_ejercicios"]:
         return "mantener"
-    if float(estado.get("porcentaje_aciertos") or 0) < PROMOCION_GRADO_CONFIG["min_precision"]:
+    if float(estado.get("precision_dificil", estado.get("porcentaje_aciertos", 0)) or 0) < PROMOCION_GRADO_CONFIG["min_precision"]:
         return "mantener"
-    if int(estado.get("partidas_distintas") or 0) < PROMOCION_GRADO_CONFIG["min_partidas"]:
-        return "mantener"
-    if int(estado.get("racha_correctas") or 0) < PROMOCION_GRADO_CONFIG["min_racha"]:
+    recientes = list(resultados_recientes or [])[-6:]
+    if len(recientes) < 6 or sum(1 for resultado in recientes if resultado) < PROMOCION_GRADO_CONFIG["min_correctas_ultimas_seis"]:
         return "mantener"
     return "promover_grado"
+
+
+def _evidencia_dificil_personal(partida, cursor):
+    """Resume solo intentos personales del tema, grado y nivel difícil actuales."""
+    cursor.execute("""
+        SELECT i.es_correcta
+        FROM intentos_juego i
+        INNER JOIN partidas_juego p ON p.id_partida = i.id_partida
+        WHERE p.id_usuario = %s AND p.tipo_contexto = 'personal'
+          AND p.id_grado = %s AND p.id_tema = %s AND i.nivel_al_responder = %s
+        ORDER BY i.id_intento DESC
+    """, (partida["id_usuario"], partida["id_grado"], partida["id_tema"], partida["id_nivel_actual"]))
+    resultados = [bool(fila["es_correcta"]) for fila in cursor.fetchall()]
+    intentos = len(resultados)
+    return {
+        "intentos_dificil": intentos,
+        "precision_dificil": _porcentaje(sum(resultados), intentos),
+        "resultados_recientes": list(reversed(resultados[:6])),
+    }
 
 
 def _actualizar_catalogo_si_corresponde(id_usuario, id_grado_origen, id_grado_nuevo, cursor):
@@ -266,7 +283,8 @@ def _actualizar_estado_personal(partida, es_correcta, tiempo_ms, nivel_recomenda
     siguiente_grado, siguiente_tema, siguiente_nivel = estado["id_grado_curricular"], estado["id_tema_actual"], nivel_recomendado["id_nivel"]
     accion, codigo_regla, promocionado = "mantener", None, False
     nivel_actual = {"codigo": estado["codigo_nivel"]}
-    if evaluar_progresion_personal(actualizado, nivel_actual, estado["codigo_grado"]) == "promover_grado":
+    evidencia = _evidencia_dificil_personal(partida, cursor) if nivel_actual["codigo"] == "dificil" else {}
+    if evaluar_progresion_personal({**actualizado, **evidencia}, nivel_actual, estado["codigo_grado"], evidencia.get("resultados_recientes")) == "promover_grado":
         grado_nuevo = _grado_siguiente(estado["id_grado_curricular"], cursor)
         tema_nuevo = _tema_equivalente(partida["tema_clave"], grado_nuevo["id_grado"], cursor) if grado_nuevo else None
         facil = _nivel_inicial(cursor)

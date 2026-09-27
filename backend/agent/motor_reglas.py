@@ -23,62 +23,36 @@ class MotorReglasAdaptativo:
             "explicacion": "No se activo una regla de ajuste.",
         }
 
-        for regla in self.reglas:
-            codigo = regla.get("codigo_regla")
-            parametros = regla.get("parametros_json") or {}
-            if codigo == "dos_errores_consecutivos" and self._dos_errores(metricas, parametros):
-                return self._aplicar_reduccion_o_refuerzo(contexto, regla, "Tiene dos errores consecutivos.")
-            if codigo == "tres_aciertos_consecutivos" and self._tres_aciertos(metricas, parametros):
-                return self._aplicar_aumento(contexto, regla, "Tiene tres aciertos consecutivos.")
-            if codigo == "porcentaje_bajo" and self._porcentaje_bajo(metricas, parametros):
-                return self._aplicar_reduccion_o_refuerzo(contexto, regla, "El porcentaje de aciertos esta por debajo del minimo.")
-            if codigo == "porcentaje_alto" and self._porcentaje_alto(metricas, parametros):
-                return self._aplicar_aumento(contexto, regla, "El porcentaje de aciertos supera el objetivo.")
-            if codigo == "rango_estable" and self._rango_estable(metricas, parametros):
-                return self._mantener(contexto, regla, "El rendimiento esta dentro del rango estable.")
-
+        if self._descenso_sostenido(metricas):
+            return self._aplicar_reduccion_o_refuerzo(
+                contexto, {"codigo_regla": "descenso_sostenido"}, "Los errores recientes requieren práctica de refuerzo."
+            )
+        if self._dominio_sostenido(metricas):
+            return self._aplicar_aumento(
+                contexto, {"codigo_regla": "dominio_sostenido"}, "Demostró dominio estable en este nivel."
+            )
         return contexto
 
-    # Detecta exactamente dos errores seguidos para evitar castigar varias veces la misma racha.
-    def _dos_errores(self, metricas, parametros):
-        limite = int(parametros.get("incorrectas_consecutivas", 2))
-        return metricas.get("incorrectas_consecutivas", 0) == limite
+    def _sin_cooldown(self, metricas):
+        return int(metricas.get("preguntas_desde_ultimo_cambio", 999)) >= 6
 
-    # Detecta exactamente tres aciertos seguidos para subir una sola vez por racha.
-    def _tres_aciertos(self, metricas, parametros):
-        limite = int(parametros.get("correctas_consecutivas", 3))
-        return metricas.get("correctas_consecutivas", 0) == limite
-
-    # Detecta bajo rendimiento con minimo de intentos y cooldown de reduccion.
-    def _porcentaje_bajo(self, metricas, parametros):
-        min_intentos = int(parametros.get("min_intentos", 5))
-        porcentaje_maximo = float(parametros.get("porcentaje_maximo", 60))
-        cooldown = int(parametros.get("cooldown_intentos", 3))
+    # Exige una ventana suficiente, precisión y un cierre consistente antes de subir.
+    def _dominio_sostenido(self, metricas):
         return (
-            metricas.get("total_intentos", 0) >= min_intentos
-            and metricas.get("porcentaje_aciertos", 0) < porcentaje_maximo
-            and not self._accion_reciente(metricas, ACCION_REDUCIR, cooldown)
-            and not self._accion_reciente(metricas, ACCION_REFORZAR, cooldown)
+            metricas.get("total_intentos", 0) >= 8
+            and metricas.get("porcentaje_aciertos", 0) >= 80
+            and metricas.get("correctas_consecutivas", 0) >= 4
+            and metricas.get("errores_ultimas_cinco", 0) <= 1
+            and self._sin_cooldown(metricas)
         )
 
-    # Detecta alto rendimiento con minimo de intentos y cooldown de aumento.
-    def _porcentaje_alto(self, metricas, parametros):
-        min_intentos = int(parametros.get("min_intentos", 5))
-        porcentaje_minimo = float(parametros.get("porcentaje_minimo", 80))
-        cooldown = int(parametros.get("cooldown_intentos", 3))
+    # Un descenso requiere evidencia repetida; un fallo aislado no altera el nivel.
+    def _descenso_sostenido(self, metricas):
         return (
-            metricas.get("total_intentos", 0) >= min_intentos
-            and metricas.get("porcentaje_aciertos", 0) > porcentaje_minimo
-            and not self._accion_reciente(metricas, ACCION_AUMENTAR, cooldown)
+            metricas.get("total_intentos", 0) >= 6
+            and (metricas.get("porcentaje_aciertos", 0) < 50 or metricas.get("errores_ultimas_cinco", 0) >= 3)
+            and self._sin_cooldown(metricas)
         )
-
-    # Mantiene nivel cuando el porcentaje queda en el rango esperado.
-    def _rango_estable(self, metricas, parametros):
-        min_intentos = int(parametros.get("min_intentos", 5))
-        porcentaje_minimo = float(parametros.get("porcentaje_minimo", 60))
-        porcentaje_maximo = float(parametros.get("porcentaje_maximo", 80))
-        porcentaje = metricas.get("porcentaje_aciertos", 0)
-        return metricas.get("total_intentos", 0) >= min_intentos and porcentaje_minimo <= porcentaje <= porcentaje_maximo
 
     # Busca si una accion ya ocurrio en las decisiones recientes.
     def _accion_reciente(self, metricas, accion, limite):

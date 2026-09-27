@@ -91,7 +91,12 @@ def generar_explicacion_pasos(parametros):
     operacion = parametros.get("operacion")
     respuesta = str(parametros.get("respuesta"))
     if operacion == "suma":
-        return [f"{parametros['expresion']} = {respuesta}."]
+        expresion = parametros["expresion"]
+        operandos = [int(valor.strip()) for valor in expresion.split("+")]
+        if len(operandos) == 3:
+            parcial = operandos[0] + operandos[1]
+            return [f"{operandos[0]} + {operandos[1]} = {parcial}.", f"{parcial} + {operandos[2]} = {respuesta}."]
+        return [f"{expresion} = {respuesta}."]
     if operacion == "resta":
         return [f"{parametros['a']} − {parametros['b']} = {respuesta}."]
     if operacion == "multiplicacion":
@@ -123,7 +128,7 @@ def generar_explicacion_pasos(parametros):
         return [f"{parametros['porcentaje']}% = {parametros['porcentaje']}/100.", f"{parametros['porcentaje']}/100 × {parametros['cantidad']} = {respuesta}."]
     if operacion == "regla_tres_directa":
         intermedio = Fraction(parametros["b"] * parametros["c"], parametros["a"])
-        return [f"x = ({parametros['c']} × {parametros['b']}) ÷ {parametros['a']}.", f"x = {_fraccion_texto(intermedio)} = {respuesta}."]
+        return [f"{parametros['a']} → {parametros['b']}; {parametros['c']} → x.", f"x = ({parametros['b']} × {parametros['c']}) ÷ {parametros['a']}.", f"x = {_fraccion_texto(intermedio)} = {respuesta}."]
     if operacion == "regla_tres_inversa":
         return [f"{parametros['a']} × {parametros['b']} = {parametros['c']} × x.", f"x = ({parametros['a']} × {parametros['b']}) ÷ {parametros['c']} = {respuesta}."]
     if operacion == "operaciones_combinadas_fracciones":

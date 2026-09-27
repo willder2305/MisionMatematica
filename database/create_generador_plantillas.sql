@@ -158,10 +158,10 @@ SELECT g.id_grado, t.id_tema, n.id_nivel,
        CONCAT('Plantilla demo para ', t.nombre_tema, ' en nivel ', n.nombre),
        CASE WHEN t.nombre_tema IN ('Suma', 'Multiplicacion') THEN 'seleccion_multiple' ELSE 'numerica' END,
        CASE t.nombre_tema
-           WHEN 'Suma' THEN 'Cuanto es {a} + {b}?'
-           WHEN 'Resta' THEN 'Cuanto es {a} - {b}?'
-           WHEN 'Multiplicacion' THEN 'Cuanto es {a} x {b}?'
-           ELSE 'Cuanto es {a} / {b}?'
+           WHEN 'Suma' THEN '¿Cuánto es {a} + {b}?'
+           WHEN 'Resta' THEN '¿Cuánto es {a} - {b}?'
+           WHEN 'Multiplicacion' THEN '¿Cuánto es {a} x {b}?'
+           ELSE '¿Cuánto es {a} / {b}?'
        END,
        CASE t.nombre_tema
            WHEN 'Suma' THEN JSON_OBJECT('operacion', 'suma', 'variables', JSON_OBJECT(

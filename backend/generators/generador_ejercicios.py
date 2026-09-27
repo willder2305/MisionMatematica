@@ -57,7 +57,9 @@ def _explicacion_determinista(parametros):
 
 def construir_ejercicio_desde_plantilla(plantilla, historial_parametros=None, seed=None):
     # Genera, valida y devuelve un ejercicio nuevo a partir de una plantilla publicada.
-    historial = {_firma_parametros(params) for params in (historial_parametros or [])}
+    historial_parametros = historial_parametros or []
+    historial = {_firma_parametros(params) for params in historial_parametros}
+    contextos_recientes = {params.get("context_key") for params in historial_parametros if params.get("context_key")}
     ultimo_error = None
 
     for intento in range(MAX_INTENTOS_GENERACION):
@@ -68,8 +70,10 @@ def construir_ejercicio_desde_plantilla(plantilla, historial_parametros=None, se
             firma = _firma_parametros(parametros)
             if firma in historial and intento < MAX_INTENTOS_GENERACION - 1:
                 continue
+            if parametros.get("context_key") in contextos_recientes and intento < MAX_INTENTOS_GENERACION - 1:
+                continue
 
-            enunciado = _renderizar(plantilla["plantilla_enunciado"], parametros)
+            enunciado = parametros.get("enunciado_contextual") or _renderizar(plantilla["plantilla_enunciado"], parametros)
             explicacion_pasos = generar_explicacion_pasos(parametros)
             explicacion = _renderizar(plantilla.get("plantilla_explicacion"), parametros) or _explicacion_determinista(parametros)
             pista = _renderizar(plantilla.get("plantilla_pista"), parametros)

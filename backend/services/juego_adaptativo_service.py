@@ -751,17 +751,32 @@ def _evaluar_respuesta(ejercicio, respuesta):
 
 
 # Calcula metricas historicas que el agente usa para decidir dificultad.
-def _obtener_metricas(id_partida, cursor):
+def _obtener_metricas(partida, cursor):
+    """Obtiene una ventana por estudiante, tema, contexto, grado y dificultad.
+
+    Las actividades mantienen su propio historial y el juego personal no mezcla
+    resultados de otros temas ni grados curriculares.
+    """
     cursor.execute(
         """
-        SELECT es_correcta, tiempo_respuesta_ms
-        FROM intentos_juego
-        WHERE id_partida = %s
-        ORDER BY id_intento ASC
+        SELECT i.id_intento, i.es_correcta, i.tiempo_respuesta_ms
+        FROM intentos_juego i
+        INNER JOIN partidas_juego p ON p.id_partida = i.id_partida
+        WHERE p.id_usuario = %s
+          AND p.tipo_contexto = %s
+          AND p.id_grado = %s
+          AND p.id_tema = %s
+          AND i.nivel_al_responder = %s
+        ORDER BY i.id_intento DESC
+        LIMIT 8
         """,
-        (id_partida,),
+        (
+            partida["id_usuario"], partida.get("tipo_contexto") or "personal", partida["id_grado"],
+            partida["id_tema"], partida["id_nivel_actual"],
+        ),
     )
     intentos = cursor.fetchall()
+    intentos.reverse()
     total = len(intentos)
     aciertos = sum(1 for intento in intentos if intento["es_correcta"])
     errores = total - aciertos
@@ -778,17 +793,22 @@ def _obtener_metricas(id_partida, cursor):
         else:
             break
 
+    ultimos_cinco = intentos[-5:]
+    errores_ultimas_cinco = sum(1 for intento in ultimos_cinco if not intento["es_correcta"])
     cursor.execute(
         """
-        SELECT accion
-        FROM decisiones_agente
-        WHERE id_partida = %s
-        ORDER BY id_decision DESC
-        LIMIT 5
+        SELECT MAX(d.id_intento) AS ultimo_cambio
+        FROM decisiones_agente d
+        INNER JOIN partidas_juego p ON p.id_partida = d.id_partida
+        WHERE p.id_usuario = %s AND p.tipo_contexto = %s AND p.id_grado = %s
+          AND d.id_tema = %s AND d.accion IN ('aumentar', 'reducir')
         """,
-        (id_partida,),
+        (partida["id_usuario"], partida.get("tipo_contexto") or "personal", partida["id_grado"], partida["id_tema"]),
     )
-    decisiones_recientes = cursor.fetchall()
+    ultimo_cambio = (cursor.fetchone() or {}).get("ultimo_cambio")
+    preguntas_desde_ultimo_cambio = total if not ultimo_cambio else sum(
+        1 for intento in intentos if int(intento["id_intento"]) > int(ultimo_cambio)
+    )
 
     return {
         "total_intentos": total,
@@ -797,8 +817,10 @@ def _obtener_metricas(id_partida, cursor):
         "porcentaje_aciertos": porcentaje,
         "correctas_consecutivas": correctas_consecutivas,
         "incorrectas_consecutivas": incorrectas_consecutivas,
+        "errores_ultimas_cinco": errores_ultimas_cinco,
+        "preguntas_desde_ultimo_cambio": preguntas_desde_ultimo_cambio,
         "tiempo_promedio_ms": promedio,
-        "decisiones_recientes": decisiones_recientes,
+        "decisiones_recientes": [],
     }
 
 
@@ -1134,7 +1156,7 @@ def responder_partida_adaptativa(id_partida, datos, id_usuario_autenticado):
         )
         id_intento = cursor.lastrowid
 
-        metricas = _obtener_metricas(id_partida, cursor)
+        metricas = _obtener_metricas(partida, cursor)
         niveles = _obtener_niveles(cursor)
         nivel_actual = _obtener_nivel_por_id(partida["id_nivel_actual"], cursor)
         decision = MotorReglasAdaptativo(niveles, _obtener_reglas(cursor)).decidir(metricas, nivel_actual)

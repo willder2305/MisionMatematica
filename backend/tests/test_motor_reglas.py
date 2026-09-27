@@ -30,62 +30,37 @@ class MotorReglasAdaptativoTest(unittest.TestCase):
             "porcentaje_aciertos": 0,
             "correctas_consecutivas": 0,
             "incorrectas_consecutivas": 0,
+            "errores_ultimas_cinco": 0,
+            "preguntas_desde_ultimo_cambio": 99,
             "tiempo_promedio_ms": 0,
             "decisiones_recientes": [],
         }
         base.update(overrides)
         return base
 
-    def test_aumenta_solo_con_tres_aciertos_exactos(self):
-        decision = self.motor.decidir(self.metricas(correctas_consecutivas=3), NIVELES[0])
+    def test_tres_aciertos_no_promueven_y_ocho_consistentes_si(self):
+        decision = self.motor.decidir(self.metricas(total_intentos=3, porcentaje_aciertos=100, correctas_consecutivas=3), NIVELES[0])
+        self.assertEqual(decision["accion"], "mantener")
+        decision = self.motor.decidir(self.metricas(total_intentos=8, porcentaje_aciertos=87.5, correctas_consecutivas=4), NIVELES[0])
         self.assertEqual(decision["accion"], "aumentar")
         self.assertEqual(decision["nivel_recomendado"]["codigo"], "intermedio")
 
-        decision = self.motor.decidir(self.metricas(correctas_consecutivas=4), NIVELES[1])
-        self.assertEqual(decision["accion"], "mantener")
-
-    def test_reduce_con_dos_errores_y_refuerza_en_minimo(self):
-        decision = self.motor.decidir(self.metricas(incorrectas_consecutivas=2), NIVELES[1])
+    def test_descenso_requiere_patron_y_refuerza_en_minimo(self):
+        decision = self.motor.decidir(self.metricas(total_intentos=6, porcentaje_aciertos=40), NIVELES[1])
         self.assertEqual(decision["accion"], "reducir")
         self.assertTrue(decision["recomendar_refuerzo"])
         self.assertEqual(decision["nivel_recomendado"]["codigo"], "facil")
 
-        decision = self.motor.decidir(self.metricas(incorrectas_consecutivas=2), NIVELES[0])
+        decision = self.motor.decidir(self.metricas(total_intentos=6, errores_ultimas_cinco=3), NIVELES[0])
         self.assertEqual(decision["accion"], "reforzar")
         self.assertEqual(decision["nivel_recomendado"]["codigo"], "facil")
 
-    def test_mantiene_en_rango_estable(self):
-        decision = self.motor.decidir(self.metricas(total_intentos=5, porcentaje_aciertos=70), NIVELES[1])
-        self.assertEqual(decision["accion"], "mantener")
-        self.assertEqual(decision["codigo_regla"], "rango_estable")
-
-    def test_porcentaje_alto_respeta_cooldown(self):
-        decision = self.motor.decidir(self.metricas(total_intentos=5, porcentaje_aciertos=100), NIVELES[1])
-        self.assertEqual(decision["accion"], "aumentar")
-
-        decision = self.motor.decidir(
-            self.metricas(
-                total_intentos=6,
-                porcentaje_aciertos=100,
-                decisiones_recientes=[{"accion": "aumentar"}],
-            ),
-            NIVELES[1],
-        )
+    def test_error_aislado_mantiene_el_nivel(self):
+        decision = self.motor.decidir(self.metricas(total_intentos=6, porcentaje_aciertos=83, errores_ultimas_cinco=1), NIVELES[1])
         self.assertEqual(decision["accion"], "mantener")
 
-    def test_porcentaje_bajo_reduce_sin_cooldown_reciente(self):
-        decision = self.motor.decidir(self.metricas(total_intentos=5, porcentaje_aciertos=40), NIVELES[2])
-        self.assertEqual(decision["accion"], "reducir")
-        self.assertEqual(decision["nivel_recomendado"]["codigo"], "intermedio")
-
-        decision = self.motor.decidir(
-            self.metricas(
-                total_intentos=6,
-                porcentaje_aciertos=30,
-                decisiones_recientes=[{"accion": "reducir"}],
-            ),
-            NIVELES[2],
-        )
+    def test_cooldown_impide_otro_cambio_antes_de_seis_preguntas(self):
+        decision = self.motor.decidir(self.metricas(total_intentos=8, porcentaje_aciertos=100, correctas_consecutivas=8, preguntas_desde_ultimo_cambio=5), NIVELES[1])
         self.assertEqual(decision["accion"], "mantener")
 
 

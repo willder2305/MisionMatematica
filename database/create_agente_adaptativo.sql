@@ -381,28 +381,28 @@ WHERE g.codigo_grado IN ('4P', '5P', '6P')
   );
 
 INSERT INTO ejercicios (id_tema, id_nivel, enunciado, tipo_respuesta, respuesta_correcta, explicacion, pista, estado, es_demo)
-SELECT t.id_tema, n.id_nivel, 'Cuanto es 2 + 3?', 'seleccion_multiple', '5', '2 + 3 = 5.', 'Suma primero las unidades.', 'publicado', 1
+SELECT t.id_tema, n.id_nivel, '¿Cuánto es 2 + 3?', 'seleccion_multiple', '5', '2 + 3 = 5.', 'Suma primero las unidades.', 'publicado', 1
 FROM temas t JOIN grados g ON g.id_grado = t.id_grado JOIN niveles_dificultad n ON n.codigo = 'facil'
 WHERE g.codigo_grado IN ('4P', '5P', '6P') AND t.nombre_tema = 'Operaciones basicas'
-  AND NOT EXISTS (SELECT 1 FROM ejercicios e WHERE e.id_tema = t.id_tema AND e.enunciado = 'Cuanto es 2 + 3?');
+  AND NOT EXISTS (SELECT 1 FROM ejercicios e WHERE e.id_tema = t.id_tema AND e.enunciado = '¿Cuánto es 2 + 3?');
 
 INSERT INTO ejercicios (id_tema, id_nivel, enunciado, tipo_respuesta, respuesta_correcta, explicacion, pista, estado, es_demo)
-SELECT t.id_tema, n.id_nivel, 'Cuanto es 9 - 4?', 'seleccion_multiple', '5', '9 - 4 = 5.', 'Resta cuatro pasos desde nueve.', 'publicado', 1
+SELECT t.id_tema, n.id_nivel, '¿Cuánto es 9 - 4?', 'seleccion_multiple', '5', '9 - 4 = 5.', 'Resta cuatro pasos desde nueve.', 'publicado', 1
 FROM temas t JOIN grados g ON g.id_grado = t.id_grado JOIN niveles_dificultad n ON n.codigo = 'facil'
 WHERE g.codigo_grado IN ('4P', '5P', '6P') AND t.nombre_tema = 'Operaciones basicas'
-  AND NOT EXISTS (SELECT 1 FROM ejercicios e WHERE e.id_tema = t.id_tema AND e.enunciado = 'Cuanto es 9 - 4?');
+  AND NOT EXISTS (SELECT 1 FROM ejercicios e WHERE e.id_tema = t.id_tema AND e.enunciado = '¿Cuánto es 9 - 4?');
 
 INSERT INTO ejercicios (id_tema, id_nivel, enunciado, tipo_respuesta, respuesta_correcta, explicacion, pista, estado, es_demo)
-SELECT t.id_tema, n.id_nivel, 'Cuanto es 6 + 7?', 'numerica', '13', '6 + 7 = 13.', 'Completa a diez y suma lo restante.', 'publicado', 1
+SELECT t.id_tema, n.id_nivel, '¿Cuánto es 6 + 7?', 'numerica', '13', '6 + 7 = 13.', 'Completa a diez y suma lo restante.', 'publicado', 1
 FROM temas t JOIN grados g ON g.id_grado = t.id_grado JOIN niveles_dificultad n ON n.codigo = 'facil'
 WHERE g.codigo_grado IN ('4P', '5P', '6P') AND t.nombre_tema = 'Operaciones basicas'
-  AND NOT EXISTS (SELECT 1 FROM ejercicios e WHERE e.id_tema = t.id_tema AND e.enunciado = 'Cuanto es 6 + 7?');
+  AND NOT EXISTS (SELECT 1 FROM ejercicios e WHERE e.id_tema = t.id_tema AND e.enunciado = '¿Cuánto es 6 + 7?');
 
 INSERT INTO ejercicios (id_tema, id_nivel, enunciado, tipo_respuesta, respuesta_correcta, explicacion, pista, estado, es_demo)
-SELECT t.id_tema, n.id_nivel, 'Cuanto es 8 x 4?', 'seleccion_multiple', '32', '8 x 4 = 32.', 'Piensa en cuatro grupos de ocho.', 'publicado', 1
+SELECT t.id_tema, n.id_nivel, '¿Cuánto es 8 x 4?', 'seleccion_multiple', '32', '8 x 4 = 32.', 'Piensa en cuatro grupos de ocho.', 'publicado', 1
 FROM temas t JOIN grados g ON g.id_grado = t.id_grado JOIN niveles_dificultad n ON n.codigo = 'intermedio'
 WHERE g.codigo_grado IN ('4P', '5P', '6P') AND t.nombre_tema = 'Operaciones basicas'
-  AND NOT EXISTS (SELECT 1 FROM ejercicios e WHERE e.id_tema = t.id_tema AND e.enunciado = 'Cuanto es 8 x 4?');
+  AND NOT EXISTS (SELECT 1 FROM ejercicios e WHERE e.id_tema = t.id_tema AND e.enunciado = '¿Cuánto es 8 x 4?');
 
 INSERT INTO ejercicios (id_tema, id_nivel, enunciado, tipo_respuesta, respuesta_correcta, explicacion, pista, estado, es_demo)
 SELECT t.id_tema, n.id_nivel, 'Resuelve: 45 / 5', 'numerica', '9', '45 / 5 = 9.', 'Busca cuantas veces cabe 5 en 45.', 'publicado', 1
@@ -411,10 +411,10 @@ WHERE g.codigo_grado IN ('4P', '5P', '6P') AND t.nombre_tema = 'Operaciones basi
   AND NOT EXISTS (SELECT 1 FROM ejercicios e WHERE e.id_tema = t.id_tema AND e.enunciado = 'Resuelve: 45 / 5');
 
 INSERT INTO ejercicios (id_tema, id_nivel, enunciado, tipo_respuesta, respuesta_correcta, explicacion, pista, estado, es_demo)
-SELECT t.id_tema, n.id_nivel, 'Cuanto es 12 x 7?', 'seleccion_multiple', '84', '12 x 7 = 84.', 'Multiplica 10 x 7 y 2 x 7.', 'publicado', 1
+SELECT t.id_tema, n.id_nivel, '¿Cuánto es 12 x 7?', 'seleccion_multiple', '84', '12 x 7 = 84.', 'Multiplica 10 x 7 y 2 x 7.', 'publicado', 1
 FROM temas t JOIN grados g ON g.id_grado = t.id_grado JOIN niveles_dificultad n ON n.codigo = 'dificil'
 WHERE g.codigo_grado IN ('4P', '5P', '6P') AND t.nombre_tema = 'Operaciones basicas'
-  AND NOT EXISTS (SELECT 1 FROM ejercicios e WHERE e.id_tema = t.id_tema AND e.enunciado = 'Cuanto es 12 x 7?');
+  AND NOT EXISTS (SELECT 1 FROM ejercicios e WHERE e.id_tema = t.id_tema AND e.enunciado = '¿Cuánto es 12 x 7?');
 
 INSERT INTO ejercicios (id_tema, id_nivel, enunciado, tipo_respuesta, respuesta_correcta, explicacion, pista, estado, es_demo)
 SELECT t.id_tema, n.id_nivel, 'Resuelve: 144 / 12', 'numerica', '12', '144 / 12 = 12.', '12 x 12 = 144.', 'publicado', 1
@@ -426,22 +426,22 @@ INSERT INTO opciones_ejercicio (id_ejercicio, texto_opcion, orden_visualizacion)
 SELECT e.id_ejercicio, opciones.texto, opciones.orden
 FROM ejercicios e
 JOIN (
-    SELECT 'Cuanto es 2 + 3?' AS enunciado, '4' AS texto, 1 AS orden
-    UNION ALL SELECT 'Cuanto es 2 + 3?', '5', 2
-    UNION ALL SELECT 'Cuanto es 2 + 3?', '6', 3
-    UNION ALL SELECT 'Cuanto es 2 + 3?', '7', 4
-    UNION ALL SELECT 'Cuanto es 9 - 4?', '3', 1
-    UNION ALL SELECT 'Cuanto es 9 - 4?', '4', 2
-    UNION ALL SELECT 'Cuanto es 9 - 4?', '5', 3
-    UNION ALL SELECT 'Cuanto es 9 - 4?', '6', 4
-    UNION ALL SELECT 'Cuanto es 8 x 4?', '24', 1
-    UNION ALL SELECT 'Cuanto es 8 x 4?', '32', 2
-    UNION ALL SELECT 'Cuanto es 8 x 4?', '36', 3
-    UNION ALL SELECT 'Cuanto es 8 x 4?', '40', 4
-    UNION ALL SELECT 'Cuanto es 12 x 7?', '72', 1
-    UNION ALL SELECT 'Cuanto es 12 x 7?', '84', 2
-    UNION ALL SELECT 'Cuanto es 12 x 7?', '92', 3
-    UNION ALL SELECT 'Cuanto es 12 x 7?', '96', 4
+    SELECT '¿Cuánto es 2 + 3?' AS enunciado, '4' AS texto, 1 AS orden
+    UNION ALL SELECT '¿Cuánto es 2 + 3?', '5', 2
+    UNION ALL SELECT '¿Cuánto es 2 + 3?', '6', 3
+    UNION ALL SELECT '¿Cuánto es 2 + 3?', '7', 4
+    UNION ALL SELECT '¿Cuánto es 9 - 4?', '3', 1
+    UNION ALL SELECT '¿Cuánto es 9 - 4?', '4', 2
+    UNION ALL SELECT '¿Cuánto es 9 - 4?', '5', 3
+    UNION ALL SELECT '¿Cuánto es 9 - 4?', '6', 4
+    UNION ALL SELECT '¿Cuánto es 8 x 4?', '24', 1
+    UNION ALL SELECT '¿Cuánto es 8 x 4?', '32', 2
+    UNION ALL SELECT '¿Cuánto es 8 x 4?', '36', 3
+    UNION ALL SELECT '¿Cuánto es 8 x 4?', '40', 4
+    UNION ALL SELECT '¿Cuánto es 12 x 7?', '72', 1
+    UNION ALL SELECT '¿Cuánto es 12 x 7?', '84', 2
+    UNION ALL SELECT '¿Cuánto es 12 x 7?', '92', 3
+    UNION ALL SELECT '¿Cuánto es 12 x 7?', '96', 4
 ) opciones ON opciones.enunciado = e.enunciado
 WHERE e.tipo_respuesta = 'seleccion_multiple'
   AND NOT EXISTS (

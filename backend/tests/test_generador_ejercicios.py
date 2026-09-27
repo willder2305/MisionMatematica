@@ -3,6 +3,7 @@ from decimal import Decimal
 from fractions import Fraction
 
 from generators.generador_ejercicios import construir_ejercicio_desde_plantilla
+from generators.contextos_regla_tres import DIRECTA, INVERSA
 
 
 def plantilla(operacion, tipo_respuesta="seleccion_multiple", variables=None, extras=None):
@@ -17,7 +18,7 @@ def plantilla(operacion, tipo_respuesta="seleccion_multiple", variables=None, ex
         "id_tema": 1,
         "id_nivel": 1,
         "tipo_respuesta": tipo_respuesta,
-        "plantilla_enunciado": "Cuanto es {a} x {b}?",
+        "plantilla_enunciado": "¿Cuánto es {a} x {b}?",
         "plantilla_explicacion": "{a} x {b} = {respuesta}.",
         "plantilla_pista": "Calcula paso a paso.",
         "configuracion_json": config,
@@ -148,6 +149,18 @@ class GeneradorEjerciciosTest(unittest.TestCase):
             pi = ej_inversa["parametros"]
             self.assertEqual(Fraction(ej_inversa["respuesta_correcta"]), Fraction(pi["a"] * pi["b"], pi["c"]))
             self.assertEqual(pi["tipo_proporcion"], "inversa")
+
+    def test_regla_de_tres_tiene_banco_amplio_y_ortografia_correcta(self):
+        self.assertGreaterEqual(len(DIRECTA), 10)
+        self.assertGreaterEqual(len(INVERSA), 10)
+        variables = {"a": {"tipo": "entero", "min": 2, "max": 12}, "b": {"tipo": "entero", "min": 2, "max": 30}, "c": {"tipo": "entero", "min": 2, "max": 12}}
+        contextos = set()
+        for seed in range(80):
+            ejercicio = construir_ejercicio_desde_plantilla(plantilla("regla_tres_directa", variables=variables), seed=seed)
+            contextos.add(ejercicio["parametros"]["context_key"])
+            self.assertTrue(ejercicio["enunciado"].endswith("?"))
+            self.assertNotIn(" cuanto ", ejercicio["enunciado"].lower())
+        self.assertGreaterEqual(len(contextos), 8)
 
     def test_conversiones_y_geometria_validas(self):
         conversion = plantilla("conversion_fracciones", extras={"subtipo": "mixta"})

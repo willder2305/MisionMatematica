@@ -2672,3 +2672,10 @@ El despliegue Docker conserva la separación de responsabilidades: `frontend` co
 - No se detectaron uploads, PDF, exports ni archivos generados que exijan otro volumen persistente. Los assets del juego forman parte del build estático.
 - `DOCKER_DEPLOY.md` concentra comandos de VPS, variables, HTTPS, backup, restauración, actualización y diagnóstico. Docker no estaba instalado en el equipo durante la preparación, por lo que `docker compose config`, construcción de imágenes, persistencia del volumen y pruebas funcionales dentro de contenedores deben ejecutarse en un host con Docker antes del primer despliegue.
 
+# Ajuste gradual del agente y generación procedimental
+
+El juego personal evalúa la dificultad por estudiante, tema, grado y nivel. Para promover de Fácil a Intermedio o de Intermedio a Difícil requiere al menos 8 intentos en el nivel actual, precisión mínima de 80 %, 4 respuestas correctas consecutivas, como máximo un error en las últimas cinco respuestas y un cooldown de 6 preguntas desde el último cambio. Un error aislado mantiene el nivel; el descenso requiere 6 intentos y precisión menor a 50 % o 3 errores en las últimas cinco respuestas.
+
+La promoción curricular solo existe en juego personal: Cuarto Difícil a Quinto Fácil y Quinto Difícil a Sexto Fácil requieren 12 intentos en Difícil, precisión mínima de 85 % y al menos 5 respuestas correctas de las últimas 6. Las actividades docentes conservan siempre su grado y su progreso separado.
+
+Regla de tres directa e inversa usa un banco procedural de 10 contextos por tipo. El generador persiste `template_key` y `context_key` dentro de sus parámetros, evita reutilizar un contexto reciente y genera el procedimiento breve validado antes de mostrar la pregunta.

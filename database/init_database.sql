@@ -1,4 +1,4 @@
-﻿CREATE DATABASE IF NOT EXISTS tesis_matematica_app
+CREATE DATABASE IF NOT EXISTS tesis_matematica_app
     CHARACTER SET utf8mb4
     COLLATE utf8mb4_unicode_ci;
 
@@ -910,12 +910,12 @@ SELECT t.id_tema, n.id_nivel, datos.enunciado, datos.tipo_respuesta, datos.respu
 FROM temas t
 INNER JOIN grados g ON g.id_grado = t.id_grado
 CROSS JOIN (
-    SELECT 'facil' AS codigo_nivel, 'Cuanto es 2 + 3?' AS enunciado, 'seleccion_multiple' AS tipo_respuesta, '5' AS respuesta_correcta, '2 + 3 = 5.' AS explicacion, 'Suma primero las unidades.' AS pista
-    UNION ALL SELECT 'facil', 'Cuanto es 9 - 4?', 'seleccion_multiple', '5', '9 - 4 = 5.', 'Resta cuatro pasos desde nueve.'
-    UNION ALL SELECT 'facil', 'Cuanto es 6 + 7?', 'numerica', '13', '6 + 7 = 13.', 'Completa a diez y suma lo restante.'
-    UNION ALL SELECT 'intermedio', 'Cuanto es 8 x 4?', 'seleccion_multiple', '32', '8 x 4 = 32.', 'Piensa en cuatro grupos de ocho.'
+    SELECT 'facil' AS codigo_nivel, '¿Cuánto es 2 + 3?' AS enunciado, 'seleccion_multiple' AS tipo_respuesta, '5' AS respuesta_correcta, '2 + 3 = 5.' AS explicacion, 'Suma primero las unidades.' AS pista
+    UNION ALL SELECT 'facil', '¿Cuánto es 9 - 4?', 'seleccion_multiple', '5', '9 - 4 = 5.', 'Resta cuatro pasos desde nueve.'
+    UNION ALL SELECT 'facil', '¿Cuánto es 6 + 7?', 'numerica', '13', '6 + 7 = 13.', 'Completa a diez y suma lo restante.'
+    UNION ALL SELECT 'intermedio', '¿Cuánto es 8 x 4?', 'seleccion_multiple', '32', '8 x 4 = 32.', 'Piensa en cuatro grupos de ocho.'
     UNION ALL SELECT 'intermedio', 'Resuelve: 45 / 5', 'numerica', '9', '45 / 5 = 9.', 'Busca cuantas veces cabe 5 en 45.'
-    UNION ALL SELECT 'dificil', 'Cuanto es 12 x 7?', 'seleccion_multiple', '84', '12 x 7 = 84.', 'Multiplica 10 x 7 y 2 x 7.'
+    UNION ALL SELECT 'dificil', '¿Cuánto es 12 x 7?', 'seleccion_multiple', '84', '12 x 7 = 84.', 'Multiplica 10 x 7 y 2 x 7.'
     UNION ALL SELECT 'dificil', 'Resuelve: 144 / 12', 'numerica', '12', '144 / 12 = 12.', '12 x 12 = 144.'
 ) datos
 INNER JOIN niveles_dificultad n ON n.codigo = datos.codigo_nivel
@@ -931,22 +931,22 @@ INSERT INTO opciones_ejercicio (id_ejercicio, texto_opcion, orden_visualizacion)
 SELECT e.id_ejercicio, opciones.texto, opciones.orden
 FROM ejercicios e
 JOIN (
-    SELECT 'Cuanto es 2 + 3?' AS enunciado, '4' AS texto, 1 AS orden
-    UNION ALL SELECT 'Cuanto es 2 + 3?', '5', 2
-    UNION ALL SELECT 'Cuanto es 2 + 3?', '6', 3
-    UNION ALL SELECT 'Cuanto es 2 + 3?', '7', 4
-    UNION ALL SELECT 'Cuanto es 9 - 4?', '3', 1
-    UNION ALL SELECT 'Cuanto es 9 - 4?', '4', 2
-    UNION ALL SELECT 'Cuanto es 9 - 4?', '5', 3
-    UNION ALL SELECT 'Cuanto es 9 - 4?', '6', 4
-    UNION ALL SELECT 'Cuanto es 8 x 4?', '24', 1
-    UNION ALL SELECT 'Cuanto es 8 x 4?', '32', 2
-    UNION ALL SELECT 'Cuanto es 8 x 4?', '36', 3
-    UNION ALL SELECT 'Cuanto es 8 x 4?', '40', 4
-    UNION ALL SELECT 'Cuanto es 12 x 7?', '72', 1
-    UNION ALL SELECT 'Cuanto es 12 x 7?', '84', 2
-    UNION ALL SELECT 'Cuanto es 12 x 7?', '92', 3
-    UNION ALL SELECT 'Cuanto es 12 x 7?', '96', 4
+    SELECT '¿Cuánto es 2 + 3?' AS enunciado, '4' AS texto, 1 AS orden
+    UNION ALL SELECT '¿Cuánto es 2 + 3?', '5', 2
+    UNION ALL SELECT '¿Cuánto es 2 + 3?', '6', 3
+    UNION ALL SELECT '¿Cuánto es 2 + 3?', '7', 4
+    UNION ALL SELECT '¿Cuánto es 9 - 4?', '3', 1
+    UNION ALL SELECT '¿Cuánto es 9 - 4?', '4', 2
+    UNION ALL SELECT '¿Cuánto es 9 - 4?', '5', 3
+    UNION ALL SELECT '¿Cuánto es 9 - 4?', '6', 4
+    UNION ALL SELECT '¿Cuánto es 8 x 4?', '24', 1
+    UNION ALL SELECT '¿Cuánto es 8 x 4?', '32', 2
+    UNION ALL SELECT '¿Cuánto es 8 x 4?', '36', 3
+    UNION ALL SELECT '¿Cuánto es 8 x 4?', '40', 4
+    UNION ALL SELECT '¿Cuánto es 12 x 7?', '72', 1
+    UNION ALL SELECT '¿Cuánto es 12 x 7?', '84', 2
+    UNION ALL SELECT '¿Cuánto es 12 x 7?', '92', 3
+    UNION ALL SELECT '¿Cuánto es 12 x 7?', '96', 4
 ) opciones ON opciones.enunciado = e.enunciado
 WHERE e.tipo_respuesta = 'seleccion_multiple'
   AND NOT EXISTS (
@@ -979,10 +979,10 @@ SELECT g.id_grado, t.id_tema, n.id_nivel,
        CONCAT('Plantilla demo para ', t.nombre_tema, ' en nivel ', n.nombre),
        CASE WHEN t.nombre_tema IN ('Suma', 'Multiplicacion') THEN 'seleccion_multiple' ELSE 'numerica' END,
        CASE t.nombre_tema
-           WHEN 'Suma' THEN 'Cuanto es {a} + {b}?'
-           WHEN 'Resta' THEN 'Cuanto es {a} - {b}?'
-           WHEN 'Multiplicacion' THEN 'Cuanto es {a} x {b}?'
-           ELSE 'Cuanto es {a} / {b}?'
+           WHEN 'Suma' THEN '¿Cuánto es {a} + {b}?'
+           WHEN 'Resta' THEN '¿Cuánto es {a} - {b}?'
+           WHEN 'Multiplicacion' THEN '¿Cuánto es {a} x {b}?'
+           ELSE '¿Cuánto es {a} / {b}?'
        END,
        CASE t.nombre_tema
            WHEN 'Suma' THEN JSON_OBJECT('operacion', 'suma', 'variables', JSON_OBJECT(
@@ -1032,4 +1032,5 @@ SOURCE database/actualizar_personalizacion_tienda.sql;
 SOURCE database/actualizar_personajes_iniciales.sql;
 SOURCE database/corregir_inventario_personajes.sql;
 SOURCE database/actualizar_dificultad_facil.sql;
+SOURCE database/actualizar_generacion_ortografia_y_progresion.sql;
 SOURCE database/optimizar_indices_y_seed_qa.sql;
