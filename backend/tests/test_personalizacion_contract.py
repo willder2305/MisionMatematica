@@ -30,6 +30,12 @@ class PersonalizacionContractTest(unittest.TestCase):
         self.assertIn('"compra_personaje"', self.servicio)
         self.assertIn('"compra_mapa"', self.servicio)
 
+    def test_compra_distingue_inventario_activo_e_historico(self):
+        self.assertIn('def _propiedad_item', self.servicio)
+        self.assertIn('propiedad["estado"] == "activo"', self.servicio)
+        self.assertIn("UPDATE usuario_items SET estado = 'activo'", self.servicio)
+        self.assertIn('"articulo_ya_adquirido"', self.servicio)
+
     def test_personaje_y_mapa_exigen_inventario(self):
         self.assertIn("def puede_usar_personaje", self.servicio)
         self.assertIn("puede_usar_personaje(id_usuario, personaje_key, cursor)", self.servicio)

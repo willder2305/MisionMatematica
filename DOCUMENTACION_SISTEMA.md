@@ -47,6 +47,12 @@ Los reportes filtrados del docente y del administrador pueden descargarse en PDF
 
 Las asignaciones creadas o editadas siempre guardan diez ejercicios. La interfaz ya no solicita esa cantidad y `backend/services/asignaciones_service.py` ignora cualquier valor que un cliente alterado intente enviar.
 
+### Propiedad de personajes y compras
+
+El catálogo usa `tienda_items.id_item` como identificador persistente y `item_key` como clave técnica estable. `usuario_items` mantiene una única relación por usuario e ítem mediante su restricción única; solo una relación con estado `activo` representa propiedad. Si una relación histórica está `inactivo`, una compra válida la reactiva en la misma transacción que descuenta el saldo y registra el movimiento de monedas, sin insertar una fila duplicada.
+
+Las respuestas de Tienda e inventario proceden de la misma lectura del backend e incluyen los estados `adquirido` y `seleccionado`. Tienda y Mi personaje usan la misma función visual para decidir entre comprar, seleccionar o mostrar el personaje actual. Los precios se consultan desde el catálogo: los personajes premium cuestan 25 monedas y los mapas premium 20.
+
 ## Optimizacion y usuario QA local
 
 La aplicacion conserva el enrutamiento SPA y carga diferida por pagina. `apiClient` es la unica instancia Axios, incluye un limite de espera de 15 segundos y coordina un unico refresh de sesion para solicitudes 401 concurrentes. Los errores 403, 404 y 500 no invalidan la sesion.

@@ -3,7 +3,11 @@ import api from "./apiClient";
 const datos = (respuesta) => respuesta.data;
 
 const manejarError = (error) => {
-  throw new Error(error.response?.data?.message || "No fue posible actualizar tu personalizacion.");
+  const respuesta = error.response?.data || {};
+  const errorControlado = new Error(respuesta.message || "No fue posible actualizar tu personalizacion.");
+  errorControlado.code = respuesta.code;
+  errorControlado.data = respuesta.data;
+  throw errorControlado;
 };
 
 export const obtenerTienda = async () => {

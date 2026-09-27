@@ -1030,5 +1030,6 @@ SOURCE database/actualizar_contextos_progresion_curricular.sql;
 SOURCE database/actualizar_retroalimentacion_procedimiento.sql;
 SOURCE database/actualizar_personalizacion_tienda.sql;
 SOURCE database/actualizar_personajes_iniciales.sql;
+SOURCE database/corregir_inventario_personajes.sql;
 SOURCE database/actualizar_dificultad_facil.sql;
 SOURCE database/optimizar_indices_y_seed_qa.sql;
