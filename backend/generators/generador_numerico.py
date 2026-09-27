@@ -337,7 +337,9 @@ def generar_regla_tres(rng, configuracion, tipo):
     variables = configuracion["variables"]
     a = obtener_entero(rng, variables["a"])
     c = obtener_entero(rng, variables["c"])
-    if configuracion.get("relacion_entera"):
+    # La proporcionalidad usa resultados enteros por defecto; solo una plantilla
+    # que lo solicite expresamente puede habilitar otro tipo de resultado.
+    if configuracion.get("relacion_entera", True):
         factor = obtener_entero(rng, variables.get("factor", {"min": 1, "max": 5}))
         b = a * factor if tipo == "directa" else c * factor
     else:
