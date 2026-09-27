@@ -2,6 +2,12 @@
 
 Fecha de documentacion: 2026-09-19
 
+## Codificación de textos
+
+Los archivos Python, React, HTML, JSON y SQL del proyecto se conservan en UTF-8. MySQL usa `utf8mb4`; el conector del backend abre cada sesión con `charset="utf8mb4"` y `use_unicode=True`. Flask entrega JSON Unicode sin escape ASCII y el documento HTML declara UTF-8.
+
+La importación Docker y las migraciones manuales invocan el cliente MySQL con `--default-character-set=utf8mb4`. Para instalaciones históricas afectadas por la interpretación Latin-1 de bytes UTF-8 existe `backend/scripts/corregir_mojibake_utf8.py`: primero audita, y solo con `--apply` corrige filas que coinciden con ese patrón comprobado. No existe ninguna reparación de texto en React ni en solicitudes de producción.
+
 ## Contextos de progresion academica
 
 El sistema separa de forma persistente dos mundos que no comparten filas adaptativas ni reglas de promocion.

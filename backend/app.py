@@ -94,6 +94,8 @@ def registrar_healthcheck(app):
 def crear_app():
     validar_configuracion_produccion()
     app = Flask(__name__)
+    # Conserva caracteres Unicode en JSON; React recibe las mismas cadenas UTF-8.
+    app.json.ensure_ascii = False
     configurar_cors(app)
     configurar_seguridad(app)
     registrar_healthcheck(app)

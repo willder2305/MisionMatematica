@@ -5,5 +5,7 @@ __pycache__/
 *.py[cod]
 *.log
 tests/
-scripts/
+scripts/*
+!scripts/__init__.py
+!scripts/corregir_mojibake_utf8.py
 uploads/

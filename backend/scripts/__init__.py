@@ -1,1 +1,1 @@
-"""Utilidades ejecutables solo para administracion local."""
+"""Herramientas administrativas que se ejecutan solo de forma explícita."""

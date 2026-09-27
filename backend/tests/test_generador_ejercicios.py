@@ -216,6 +216,15 @@ class GeneradorEjerciciosTest(unittest.TestCase):
                 self.assertGreaterEqual(len(pasos), 1)
                 self.assertLessEqual(len(pasos), 4)
                 self.assertIn(ejercicio["respuesta_correcta"], " ".join(pasos))
+                texto_visible = " ".join([
+                    ejercicio["enunciado"],
+                    ejercicio["explicacion"],
+                    ejercicio["pista"],
+                    *pasos,
+                ])
+                self.assertNotIn("Ã", texto_visible)
+                self.assertNotIn("Â", texto_visible)
+                self.assertNotIn("�", texto_visible)
 
 
 if __name__ == "__main__":

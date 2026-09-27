@@ -16,4 +16,4 @@ case "$1" in
 esac
 
 docker compose -f docker-compose.prod.yml exec -T db sh -c \
-  'exec mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < "$1"
+  'exec mysql --default-character-set=utf8mb4 -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < "$1"

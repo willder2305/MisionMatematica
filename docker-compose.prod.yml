@@ -1,6 +1,9 @@
 services:
   db:
-    image: mysql:8.4
+    build:
+      context: ./database
+      dockerfile: Dockerfile.mysql
+    image: tesis2-db
     restart: unless-stopped
     environment:
       MYSQL_DATABASE: ${MYSQL_DATABASE:?Defina MYSQL_DATABASE en .env}

@@ -1,0 +1,4 @@
+FROM mysql:8.4
+
+# La imagen garantiza permisos legibles por MySQL incluso en hosts Windows.
+COPY --chmod=644 docker-init/99-utf8.cnf /etc/mysql/conf.d/99-utf8.cnf

@@ -89,16 +89,34 @@ Crear un directorio de backups fuera del repositorio o que permanezca ignorado p
 
 ```bash
 mkdir -p backups
-docker compose -f docker-compose.prod.yml exec -T db sh -c 'exec mysqldump -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' > backups/mision-matematica-$(date +%F).sql
+docker compose -f docker-compose.prod.yml exec -T db sh -c 'exec mysqldump --default-character-set=utf8mb4 --no-tablespaces -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' > backups/mision-matematica-$(date +%F).sql
 ```
 
 Restaurar solo después de validar el dump y de detener escrituras de la aplicación:
 
 ```bash
-docker compose -f docker-compose.prod.yml exec -T db sh -c 'exec mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < backups/archivo.sql
+docker compose -f docker-compose.prod.yml exec -T db sh -c 'exec mysql --default-character-set=utf8mb4 -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < backups/archivo.sql
 ```
 
 Actualmente no se detectó almacenamiento persistente de uploads, PDF ni exports: los mapas, sprites y UI se compilan como assets versionados del frontend. Si se agregan archivos de usuario en el futuro, deben ir a un volumen o almacenamiento externo y entrar en el plan de backup.
+
+## Codificación UTF-8
+
+El backend conecta a MySQL con `charset=utf8mb4`, Flask serializa JSON sin escapar Unicode, y Nginx declara `charset utf-8`. La configuración `database/docker-init/99-utf8.cnf` fija `utf8mb4` tanto para MySQL como para su cliente; la inicialización y `scripts/docker-run-sql.sh` también ejecutan el cliente con `--default-character-set=utf8mb4`. Los scripts SQL del repositorio se guardan en UTF-8.
+
+Las instalaciones creadas antes de esta configuración pueden contener texto UTF-8 interpretado como Latin-1. Antes de modificar esos datos, crear un backup y auditar desde el contenedor backend:
+
+```bash
+docker compose -f docker-compose.prod.yml run --rm backend python scripts/corregir_mojibake_utf8.py
+```
+
+Si el reporte fue revisado, aplicar la migración selectiva e idempotente:
+
+```bash
+docker compose -f docker-compose.prod.yml run --rm backend python scripts/corregir_mojibake_utf8.py --apply
+```
+
+La herramienta solo transforma cadenas con el patrón verificable `Ã` o `Â` que pueden recuperarse de Latin-1 a UTF-8. Los caracteres de reemplazo `�` no se inventan ni se modifican automáticamente: se reportan para revisión humana.
 
 ## Actualización y reversión
 

@@ -19,6 +19,8 @@ def obtener_conexion():
             user=Config.DB_USER,
             password=Config.DB_PASSWORD,
             database=Config.DB_NAME,
+            charset="utf8mb4",
+            use_unicode=True,
         )
     except Error:
         raise

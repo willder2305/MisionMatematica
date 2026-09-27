@@ -4,6 +4,9 @@ CREATE DATABASE IF NOT EXISTS tesis_matematica_app
 
 USE tesis_matematica_app;
 
+-- Los scripts fuente y la sesión de importación usan UTF-8 de cuatro bytes.
+SET NAMES utf8mb4;
+
 CREATE TABLE IF NOT EXISTS grados (
     id_grado INT AUTO_INCREMENT PRIMARY KEY,
     codigo_grado VARCHAR(20) NOT NULL,
