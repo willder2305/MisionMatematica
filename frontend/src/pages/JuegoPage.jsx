@@ -7,6 +7,7 @@ import QuestionPanel from "../components/juego/QuestionPanel";
 import PixelAlert from "../components/ui/PixelAlert";
 import { MAPA_PREDETERMINADO, obtenerPosicionCasilla } from "../config/mapasConfig";
 import { obtenerPersonajeConfig } from "../config/personajesConfig";
+import useGameFullscreen from "../hooks/useGameFullscreen";
 import { obtenerUsuarioLocal } from "../services/authService";
 import { formatLabel } from "../constants/uiLabels";
 import { continuarPartida, iniciarPartida, obtenerContextoJuego, responderPregunta, salirPartida } from "../services/juegoService";
@@ -52,16 +53,6 @@ const generarRequestId = () => {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
-// Detecta pantallas tactiles o compactas donde conviene usar landscape.
-const requiereLandscape = () => (
-  window.matchMedia?.("(pointer: coarse)")?.matches || window.innerWidth <= 1024
-);
-
-// Detecta modo vertical solo para telefono/tablet; desktop no se bloquea.
-const estaEnVerticalMovil = () => (
-  requiereLandscape() && window.matchMedia?.("(orientation: portrait)")?.matches
-);
-
 // Pantalla principal del juego: seleccion, partida, pregunta y animaciones.
 const JuegoPage = () => {
   const [partida, setPartida] = useState(null);
@@ -74,8 +65,6 @@ const JuegoPage = () => {
   const [modalSalidaAbierto, setModalSalidaAbierto] = useState(false);
   const [modalFinalAbierto, setModalFinalAbierto] = useState(false);
   const [preparandoPartida, setPreparandoPartida] = useState(false);
-  const [orientacionVertical, setOrientacionVertical] = useState(false);
-  const [fullscreenPerdido, setFullscreenPerdido] = useState(false);
   const [posicionBase, setPosicionBase] = useState(() => obtenerPosicionCasilla(MAPA_PREDETERMINADO, 0));
   const [offsetAnimacion, setOffsetAnimacion] = useState({ x: 0, y: 0 });
   const [tipoAnimacion, setTipoAnimacion] = useState("idle");
@@ -91,11 +80,20 @@ const JuegoPage = () => {
   const bloqueoRef = useRef(false);
   const inicioPartidaRef = useRef(false);
   const gameFullscreenRef = useRef(null);
-  const salidaIntencionalRef = useRef(false);
   const requestInicioRef = useRef("");
   const inicioPreguntaRef = useRef(Date.now());
   const posicionVisual = aplicarPosicionVisual(posicionBase, offsetAnimacion);
   const juegoActivo = Boolean(partida) || preparandoPartida;
+  const {
+    esLandscape,
+    esMovil,
+    mostrarAvisoSalida,
+    solicitudPendiente,
+    solicitarFullscreen,
+    salirFullscreen,
+    usarPseudoFullscreen,
+  } = useGameFullscreen({ activo: juegoActivo, contenedorRef: gameFullscreenRef });
+  const orientacionVertical = juegoActivo && esMovil && !esLandscape;
   // El catálogo solo cambia al cargar contexto; no se reagrupa durante cada frame de animación.
   const temasPorCategoria = useMemo(() => temas.reduce((grupos, tema) => {
     const categoria = tema.categoria || "Temas";
@@ -122,49 +120,8 @@ const JuegoPage = () => {
     cargarContextoJuego();
     return () => {
       cancelarAnimacion();
-      desbloquearOrientacion();
-      document.body.style.overflow = "";
     };
   }, []);
-
-  useEffect(() => {
-    if (!juegoActivo) {
-      return undefined;
-    }
-
-    const overflowAnterior = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = overflowAnterior;
-    };
-  }, [juegoActivo]);
-
-  useEffect(() => {
-    const actualizarOrientacion = () => setOrientacionVertical(estaEnVerticalMovil());
-    actualizarOrientacion();
-    window.addEventListener("resize", actualizarOrientacion);
-    window.addEventListener("orientationchange", actualizarOrientacion);
-    return () => {
-      window.removeEventListener("resize", actualizarOrientacion);
-      window.removeEventListener("orientationchange", actualizarOrientacion);
-    };
-  }, []);
-
-  useEffect(() => {
-    const detectarSalidaFullscreen = () => {
-      if (!partida || salidaIntencionalRef.current) {
-        return;
-      }
-
-      const elementoJuego = gameFullscreenRef.current;
-      if (elementoJuego && document.fullscreenElement !== elementoJuego) {
-        setFullscreenPerdido(true);
-      }
-    };
-
-    document.addEventListener("fullscreenchange", detectarSalidaFullscreen);
-    return () => document.removeEventListener("fullscreenchange", detectarSalidaFullscreen);
-  }, [partida]);
 
   // Carga el catálogo personal completo; el backend conserva grado y dificultad internos.
   const cargarContextoJuego = async () => {
@@ -192,71 +149,6 @@ const JuegoPage = () => {
       cancelAnimationFrame(animacionRef.current);
       animacionRef.current = null;
     }
-  };
-
-  // Bloquea orientacion horizontal cuando el navegador y el dispositivo lo permiten.
-  const bloquearOrientacionLandscape = async () => {
-    if (!requiereLandscape() || !screen.orientation || typeof screen.orientation.lock !== "function") {
-      return;
-    }
-
-    try {
-      await screen.orientation.lock("landscape-primary");
-    } catch (error) {
-      try {
-        await screen.orientation.lock("landscape");
-      } catch (segundoError) {
-        // Algunos navegadores no permiten bloquear orientacion; se usa overlay fallback.
-      }
-    }
-  };
-
-  // Libera el bloqueo de orientacion sin fallar en navegadores incompatibles.
-  const desbloquearOrientacion = () => {
-    if (!screen.orientation || typeof screen.orientation.unlock !== "function") {
-      return;
-    }
-
-    try {
-      screen.orientation.unlock();
-    } catch (error) {
-      // No todos los navegadores implementan unlock de forma consistente.
-    }
-  };
-
-  // Solicita fullscreen desde una accion del usuario y prepara el fallback si falla.
-  const solicitarPantallaCompleta = async () => {
-    const elementoJuego = gameFullscreenRef.current;
-    if (!elementoJuego || typeof elementoJuego.requestFullscreen !== "function") {
-      setFullscreenPerdido(true);
-      return;
-    }
-
-    try {
-      salidaIntencionalRef.current = false;
-      if (document.fullscreenElement !== elementoJuego) {
-        await elementoJuego.requestFullscreen();
-      }
-      await bloquearOrientacionLandscape();
-      setFullscreenPerdido(false);
-    } catch (error) {
-      setFullscreenPerdido(true);
-    }
-  };
-
-  // Sale de fullscreen y restaura orientacion/layout normal al abandonar el juego.
-  const salirPantallaCompleta = async () => {
-    salidaIntencionalRef.current = true;
-    desbloquearOrientacion();
-    setFullscreenPerdido(false);
-    if (document.fullscreenElement && typeof document.exitFullscreen === "function") {
-      try {
-        await document.exitFullscreen();
-      } catch (error) {
-        // Si el navegador ya salio de fullscreen, el flujo puede continuar.
-      }
-    }
-    salidaIntencionalRef.current = false;
   };
 
   // Devuelve el personaje a idle y habilita controles.
@@ -411,7 +303,7 @@ const JuegoPage = () => {
       setFeedback(null);
       setExplicacionAbierta(false);
       setMensaje({ tipo: "", texto: "" });
-      await solicitarPantallaCompleta();
+      await solicitarFullscreen();
       const respuesta = await iniciarPartida({
         ...(idTema ? { id_tema: Number(idTema) } : {}),
         request_id: requestInicioRef.current,
@@ -424,7 +316,7 @@ const JuegoPage = () => {
       setModalFinalAbierto(false);
       setMensaje({ tipo: "", texto: "" });
     } catch (error) {
-      await salirPantallaCompleta();
+      await salirFullscreen();
       setMensaje({ tipo: "error", texto: error.message });
     } finally {
       setPreparandoPartida(false);
@@ -475,7 +367,7 @@ const JuegoPage = () => {
       setProcesando(true);
       await salirPartida(partida.id_partida);
       reiniciarEstadoLocal();
-      await salirPantallaCompleta();
+      await salirFullscreen();
       navegarInternamente(idAsignacion ? "/actividades" : "/panel-estudiante");
     } catch (error) {
       setMensaje({ tipo: "error", texto: error.message });
@@ -502,7 +394,7 @@ const JuegoPage = () => {
   // Sale definitivamente del juego y restaura el menu de actividades.
   const volverAActividades = async () => {
     reiniciarEstadoLocal();
-    await salirPantallaCompleta();
+    await salirFullscreen();
     navegarInternamente(idAsignacion ? "/actividades" : "/panel-estudiante");
   };
 
@@ -532,7 +424,10 @@ const JuegoPage = () => {
   };
 
   return (
-    <section ref={gameFullscreenRef} className={`content game-page ${juegoActivo ? "game-page-active" : ""}`}>
+    <section
+      ref={gameFullscreenRef}
+      className={`content game-page ${juegoActivo ? "game-page-active" : ""} ${usarPseudoFullscreen ? "game-pseudo-fullscreen" : ""}`}
+    >
       {!juegoActivo && (
         <div className="header-row">
           <div>
@@ -597,7 +492,7 @@ const JuegoPage = () => {
                 modalFinalAbierto ||
                 explicacionAbierta ||
                 orientacionVertical ||
-                fullscreenPerdido ||
+                mostrarAvisoSalida ||
                 partida.estado !== "en_curso"
               }
               onResponder={manejarRespuesta}
@@ -624,13 +519,13 @@ const JuegoPage = () => {
                 <span>Para jugar Misión Matemática, coloca tu dispositivo horizontalmente.</span>
               </div>
             )}
-            {fullscreenPerdido && !orientacionVertical && (
+            {mostrarAvisoSalida && !orientacionVertical && (
               <div className="game-blocking-overlay" role="alert">
                 <strong>Has salido de pantalla completa.</strong>
                 <span>Para una mejor experiencia, activa pantalla completa.</span>
                 <div className="game-overlay-actions">
-                  <button type="button" className="pixel-primary-button success" onClick={solicitarPantallaCompleta}>
-                    Volver a pantalla completa
+                  <button type="button" className="pixel-primary-button success" onClick={solicitarFullscreen} disabled={solicitudPendiente}>
+                    {solicitudPendiente ? "Activando..." : "Volver a pantalla completa"}
                   </button>
                   <button type="button" className="danger" onClick={() => setModalSalidaAbierto(true)}>
                     Salir de la actividad

@@ -95,3 +95,12 @@ export const obtenerFrameActual = (personajeConfig, tipoAnimacion, frameIndex) =
   const frameBase = tipoAnimacion === "idle" ? personajeConfig.idle : secuenciaActual[frameIndex % secuenciaActual.length] || personajeConfig.idle;
   return normalizarFramePersonaje(frameBase);
 };
+
+/** Reúne las vistas y secuencias del personaje para dejarlas disponibles antes de animar. */
+export const obtenerAssetsPrecargaPersonaje = (personajeId) => {
+  const config = obtenerPersonajeConfig(personajeId);
+  return [...config.vistas, config.idle, ...config.correcto, ...config.error]
+    .filter(Boolean)
+    .map((frame) => normalizarFramePersonaje(frame).src)
+    .filter((src, indice, lista) => typeof src === "string" && lista.indexOf(src) === indice);
+};

@@ -1366,11 +1366,32 @@ td button + button {
 
 .game-page-active {
   background: #06132a;
+  height: 100vh;
+  height: 100dvh;
   inset: 0;
   overflow: hidden;
   padding: 0;
   position: fixed;
+  touch-action: manipulation;
+  width: 100vw;
+  width: 100dvw;
   z-index: 1000;
+}
+
+/* Fallback visual para móviles y navegadores que rechazan la Fullscreen API. */
+.game-pseudo-fullscreen {
+  margin: 0;
+  max-height: none;
+  max-width: none;
+}
+
+html.game-session-active,
+body.game-session-active,
+#root.game-session-active {
+  height: 100%;
+  margin: 0;
+  overscroll-behavior: none;
+  padding: 0;
 }
 
 .game-start-panel {
@@ -1562,6 +1583,11 @@ td button + button {
   transform: translate(calc(-1 * var(--feet-anchor-x)), calc(-1 * var(--feet-anchor-y)));
   transform-origin: var(--feet-anchor-x) var(--feet-anchor-y);
   width: var(--character-width);
+}
+
+.character-animation-layer {
+  height: 100%;
+  width: 100%;
 }
 
 .character-sprite {

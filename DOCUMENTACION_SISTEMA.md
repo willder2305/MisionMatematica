@@ -2680,6 +2680,14 @@ El personaje del juego se obtiene de `partida.personaje`, valor que el backend r
 
 La corrección conserva `spriteBox`, `feetAnchor`, `offsetAnimacion` y `snapACasilla()`. La prueba local de pantalla completa mostró el Explorador en casilla lógica `0`, luego en casilla `1` tras un acierto y de vuelta en la misma coordenada después de un error, sin errores de consola. El build de frontend y las cinco pruebas Node finalizaron correctamente.
 
+## Fullscreen móvil y animaciones del juego
+
+`useGameFullscreen` concentra la detección de capacidades y evita que una partida móvil dependa de la Fullscreen API. Tras pulsar iniciar, el navegador intenta `requestFullscreen` o `webkitRequestFullscreen` cuando existe. Si no hay soporte, la petición es rechazada o el navegador no entra realmente en fullscreen, el juego conserva el modo `game-pseudo-fullscreen`: un contenedor fijo que usa `100dvh` y `100dvw`, bloquea scroll del documento y mantiene el mapa, HUD, respuestas y botón Salir dentro del viewport disponible.
+
+El aviso “Has salido de pantalla completa” solo se muestra cuando se confirmó antes un fullscreen nativo y un evento posterior `fullscreenchange` o `webkitfullscreenchange` informa su salida sin que esta fuera intencional. Un `resize`, la barra móvil, la rotación o la ausencia de API no lo activan. En teléfono o tableta, portrait muestra el overlay “Gira tu dispositivo”; al detectar landscape mediante `matchMedia` y las dimensiones reales del `visualViewport`, desaparece automáticamente.
+
+Cada entrada de `personajesConfig.js` mantiene sus vistas, seis frames de acierto y seis de error. `CharacterSprite` precarga las vistas y secuencias del personaje seleccionado con `Image` antes de la primera respuesta. El avance interpola la posición desde la casilla origen a la destino mientras alterna frames; un error reproduce su secuencia sin modificar la casilla. Al terminar ambos flujos, `snapACasilla()` restablece la coordenada exacta y el anclaje de pies permanece separado del frame visible.
+
 ## Preparación de producción y despliegue
 
 La aplicación mantiene su arquitectura `React/Vite -> API Flask -> MySQL/MariaDB`. El frontend se publica como SPA estática desde `frontend/dist`; Nginx reenvía únicamente `/api/` a Gunicorn y conserva las rutas cliente mediante `try_files ... /index.html`.
