@@ -10,3 +10,7 @@ output/playwright/
 personaje-*.png
 *.log
 backups/
+certbot/
+letsencrypt/
+*.pem
+*.key

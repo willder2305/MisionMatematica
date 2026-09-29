@@ -1,5 +1,7 @@
 # Despliegue en VPS Linux — Misión Matemática
 
+> El despliegue soportado actualmente usa Docker, Certbot y el dominio `misionmatematica.com`. Seguir [DOCKER_DEPLOY.md](DOCKER_DEPLOY.md) como guía operativa principal. Este documento conserva referencias de arquitectura para una instalación manual, que no es el flujo recomendado.
+
 ## Topología objetivo
 
 ```mermaid
@@ -48,7 +50,7 @@ DB_PORT=3306
 DB_USER=<usuario-restringido-de-aplicacion>
 DB_PASSWORD=<contrasena-segura>
 DB_NAME=tesis_matematica_app
-FRONTEND_URLS=https://<dominio>
+FRONTEND_URLS=https://misionmatematica.com,https://www.misionmatematica.com
 TRUST_PROXY_HEADERS=true
 RATE_LIMIT_ENABLED=true
 RATE_LIMIT_AUTH_PER_MINUTE=10
@@ -69,13 +71,13 @@ El backend rechaza el secreto JWT de desarrollo cuando `APP_ENV=production`. Con
 2. Copiar [deploy/mision-matematica.service](deploy/mision-matematica.service) a systemd, revisar sus rutas y ejecutar `sudo systemctl enable --now mision-matematica`.
 3. Instalar [deploy/nginx-mision-matematica.conf](deploy/nginx-mision-matematica.conf), configurar dominio/certificado TLS, validar `sudo nginx -t` y recargar Nginx.
 4. Exponer solo 80/443 al público. Gunicorn queda en `127.0.0.1:8000` y MySQL/MariaDB no requiere acceso público.
-5. Comprobar localmente `curl http://127.0.0.1:8000/api/health` y externamente `https://<dominio>/api/health`.
+5. Comprobar localmente `curl http://127.0.0.1:8000/api/health` y externamente `https://misionmatematica.com/api/health`.
 
 El healthcheck confirma que Flask responde; no consulta MySQL y no expone estado interno. La supervisión de base de datos debe hacerse con una verificación autenticada desde el entorno de operaciones.
 
 ## Nginx, HTTPS y SPA
 
-Nginx atiende los archivos con hash del build y redirige rutas desconocidas a `index.html`, requerido para que las rutas de la SPA funcionen al recargar. Solo `/api/` se reenvía a Gunicorn. Configurar un certificado válido mediante el proveedor elegido o Certbot, y reemplazar `server_name _` antes de activar el sitio.
+Nginx atiende los archivos con hash del build y redirige rutas desconocidas a `index.html`, requerido para que las rutas de la SPA funcionen al recargar. Solo `/api/` se reenvía a Gunicorn. La plantilla manual usa `misionmatematica.com`, redirige `www` al dominio canónico y requiere el certificado de Let's Encrypt indicado en ella.
 
 ## Operación, backups y reversión
 

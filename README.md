@@ -238,6 +238,10 @@ QA basico ejecutado:
 
 - Build de produccion con Vite.
 - Verificacion de chunks por pagina.
+
+## Producción con Docker y HTTPS
+
+El despliegue de producción usa `docker-compose.prod.yml`: Nginx sirve la SPA y el prefijo relativo `/api`, Gunicorn/Flask y MySQL quedan dentro de la red Docker, y solo Nginx publica los puertos 80 y 443. La configuración oficial, DNS, Certbot y renovación están documentados en [DOCKER_DEPLOY.md](DOCKER_DEPLOY.md). Para producción se debe mantener `VITE_API_URL=/api` y definir exactamente `FRONTEND_URLS=https://misionmatematica.com,https://www.misionmatematica.com`.
 - Revision Playwright de `/login`, `/registro` y `/secciones`.
 - Verificacion movil a 320 px sin scroll horizontal.
 - Revision de consola sin errores en `/secciones` con backend activo.

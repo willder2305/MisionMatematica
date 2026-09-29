@@ -1,148 +1,197 @@
-# Despliegue Docker — Misión Matemática
+# Despliegue Docker de producción — Misión Matemática
 
-## Arquitectura
+## Alcance y arquitectura
+
+Esta es la vía oficial de producción para `misionmatematica.com`. React se compila durante la construcción de la imagen, Nginx sirve la SPA y reenvía `/api/` a Gunicorn/Flask; Flask se comunica con MySQL 8.4 mediante la red interna de Docker.
 
 ```mermaid
 flowchart LR
-    U[Internet HTTPS] --> N[Nginx + React]
+    U[Usuario] -->|HTTPS 443| N[Nginx + React]
+    U -->|HTTP 80 ACME / redirección| N
     N -->|/api| B[Gunicorn + Flask]
     B --> D[(MySQL 8.4)]
-    D --- V[(mysql_data)]
+    C[Certbot] -->|webroot compartido| N
+    C -->|certificados compartidos| N
 ```
 
-El contenedor `frontend` usa Node solo durante el build multi-stage y ejecuta Nginx en tiempo de ejecución. `backend` usa Python 3.12 y Gunicorn; `db` usa MySQL 8.4 con un volumen nombrado. No se ejecutan Vite ni el servidor de desarrollo de Flask.
+Solo `frontend` publica `80` y `443`. `backend:8000` y `db:3306` son internos. `mysql_data` conserva datos; `certbot_www` sirve retos ACME y `letsencrypt_data` conserva certificados.
 
-## Requisitos del VPS
+## DNS antes de certificar
 
-- VPS Linux con Docker Engine y Docker Compose plugin actuales.
-- Referencia inicial: 4 vCPU, 8 GB RAM y 75 GB NVMe. No hay benchmark de carga; revisar CPU, memoria y conexiones antes de imponer límites de contenedor.
-- Puertos públicos 80 y 443. MySQL no se publica hacia Internet.
-- Dominio, DNS y certificado TLS son pendientes externos.
+El dominio canónico es `https://misionmatematica.com`; `https://www.misionmatematica.com` redirige al canónico. Configurar en el proveedor DNS:
 
-Instalar Docker siguiendo la documentación oficial de la distribución y comprobarlo con:
+| Tipo | Nombre | Destino |
+| --- | --- | --- |
+| A | `@` | `148.113.250.253` |
+| CNAME | `www` | `misionmatematica.com` |
+
+Si no se admite CNAME para `www`, usar un A de `www` a `148.113.250.253`. No crear AAAA salvo que el VPS tenga IPv6 público y los puertos 80/443 estén abiertos. No modificar registros MX, TXT, DKIM o SPF existentes.
+
+Tras la propagación, comprobar desde una red externa:
+
+```bash
+dig +short A misionmatematica.com
+dig +short CNAME www.misionmatematica.com
+dig +short A www.misionmatematica.com
+```
+
+Los dos nombres deben resolver a `148.113.250.253`. DNS, propagación y certificados públicos no se solicitan desde este repositorio ni desde una máquina local.
+
+## Preparación del VPS
+
+Instalar Docker Engine, el plugin Docker Compose y Git según la distribución Linux:
 
 ```bash
 docker --version
 docker compose version
+git --version
 ```
 
-## Primera publicación
+Permitir SSH antes de activar UFW. Ajustar el puerto si SSH no usa `22`:
 
 ```bash
-git clone https://github.com/willder2305/MisionMatematica.git
-cd MisionMatematica
+sudo ufw allow OpenSSH
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw enable
+sudo ufw status verbose
+```
+
+Preparar la rama de producción:
+
+```bash
+sudo mkdir -p /opt/mision-matematica
+sudo chown -R "$USER":"$USER" /opt/mision-matematica
+git clone https://github.com/willder2305/MisionMatematica.git /opt/mision-matematica
+cd /opt/mision-matematica
+git checkout main
+git pull --ff-only origin main
+```
+
+Para este flujo no instalar XAMPP, Node, Python, Nginx ni MySQL en el host. Confirmar que ningún Apache/Nginx host usa 80/443.
+
+## Variables de producción
+
+```bash
+cd /opt/mision-matematica
 cp .env.docker.example .env
+chmod 600 .env
 ```
 
-Editar `.env` antes de continuar. Reemplazar las cuatro credenciales marcadas `CAMBIAR_`, definir el dominio real en `FRONTEND_URLS` y generar el secreto JWT:
+Reemplazar todos los marcadores `CAMBIAR_`. Los valores relevantes son:
 
-```bash
-python3 -c "import secrets; print(secrets.token_urlsafe(64))"
+```text
+MYSQL_DATABASE=tesis_matematica_app
+MYSQL_USER=mision_user
+MYSQL_PASSWORD=<contraseña-DB-segura>
+MYSQL_ROOT_PASSWORD=<contraseña-root-DB-distinta-y-segura>
+JWT_SECRET_KEY=<secreto-aleatorio-largo>
+FRONTEND_URLS=https://misionmatematica.com,https://www.misionmatematica.com
+TRUST_PROXY_HEADERS=true
+PRIMARY_DOMAIN=misionmatematica.com
+WWW_DOMAIN=www.misionmatematica.com
+LETSENCRYPT_EMAIL=<correo-administrativo-real>
+VITE_API_URL=/api
 ```
 
-No use credenciales reales en `VITE_API_URL`: todo `VITE_*` queda visible en el JavaScript compilado. Para este stack, mantener `VITE_API_URL=/api` permite que navegador, Nginx y API trabajen con el mismo origen.
+Generar JWT:
 
 ```bash
-docker compose -f docker-compose.prod.yml config
-docker compose -f docker-compose.prod.yml build
-docker compose -f docker-compose.prod.yml up -d
-docker compose -f docker-compose.prod.yml ps
+python3 -c 'import secrets; print(secrets.token_urlsafe(64))'
+```
+
+`VITE_API_URL=/api` mantiene frontend y API bajo el mismo origen HTTPS; no colocar secretos en variables `VITE_*`. `.env`, certificados y claves privadas están ignorados por Git.
+
+## Primer arranque y TLS
+
+Validar, construir y arrancar el modo bootstrap HTTP:
+
+```bash
+docker compose --env-file .env -f docker-compose.prod.yml config -q
+docker compose --env-file .env -f docker-compose.prod.yml build
+docker compose --env-file .env -f docker-compose.prod.yml up -d
+docker compose --env-file .env -f docker-compose.prod.yml ps
 curl -fsS http://127.0.0.1/api/health
 ```
 
-El primer arranque crea `mysql_data` e inicializa la base desde `database/init_database.sql`. El script ocurre **solo si el volumen está vacío**. No se ejecutan `DROP DATABASE`, `DROP TABLE` ni migraciones incrementales automáticamente en despliegues posteriores.
-
-## Acceso, Nginx y HTTPS
-
-Nginx publica React, aplica fallback SPA para recargas en rutas como `/juego` o `/tienda`, comprime HTML/CSS/JS/JSON/SVG, mantiene los assets de Vite en caché largo y pasa `/api/` sin eliminar ese prefijo hacia `backend:8000`.
-
-La imagen funciona inicialmente por HTTP en el puerto 80. Para HTTPS, montar certificados en el contenedor Nginx y añadir un bloque TLS, o colocar un reverse proxy/terminador TLS administrado delante del puerto 80. No se incluye un dominio ni certificado ficticio. Después de configurar TLS, actualizar `FRONTEND_URLS=https://dominio-real` y reiniciar el stack.
-
-## Operación diaria
+Sin certificado Nginx sirve HTTP temporal y `/.well-known/acme-challenge/`; no usa certificados ficticios ni entra en bucles. Cuando DNS y firewall ya funcionen desde Internet, emitir el certificado:
 
 ```bash
-docker compose -f docker-compose.prod.yml ps
-docker compose -f docker-compose.prod.yml logs -f frontend
-docker compose -f docker-compose.prod.yml logs -f backend
-docker compose -f docker-compose.prod.yml logs -f db
-docker compose -f docker-compose.prod.yml restart backend frontend
-docker compose -f docker-compose.prod.yml down
+cd /opt/mision-matematica
+chmod +x scripts/init-letsencrypt.sh scripts/renew-letsencrypt.sh
+./scripts/init-letsencrypt.sh
 ```
 
-`down` normal conserva `mysql_data`. **No ejecutar `docker compose down -v` en producción**: elimina los volúmenes y borra la base de datos persistente.
+El script levanta/verifica HTTP, ejecuta Certbot con `webroot` para ambos nombres y recrea Nginx al terminar. Con certificado, HTTP y `www` redirigen a `https://misionmatematica.com`.
 
-Los healthchecks son: `mysqladmin ping` para `db`, `GET /api/health` local para `backend`, y una solicitud HTTP a Nginx para `frontend`. El endpoint de API no incluye credenciales, SQL ni versión de componentes.
-
-## Migraciones controladas
-
-Antes de cualquier SQL incremental, crear un backup, revisar el script y aplicarlo manualmente:
+Validación final:
 
 ```bash
-./scripts/docker-run-sql.sh database/actualizar_catalogo_personal_temas.sql
+curl -I http://misionmatematica.com
+curl -I https://www.misionmatematica.com
+curl -fsS https://misionmatematica.com/api/health
+docker compose --env-file .env -f docker-compose.prod.yml exec -T frontend nginx -t
 ```
 
-El script acepta únicamente archivos dentro de `database/` y usa las variables ya presentes dentro del contenedor `db`; la contraseña no se escribe en el comando del host. No hay un ejecutor automático porque los scripts existentes corresponden a etapas históricas y deben seleccionarse según la versión instalada.
+Se espera `301` hacia `https://misionmatematica.com/...` en las dos primeras comprobaciones. Probar además login, una partida y una solicitud de API desde el navegador.
 
-## Backup y restauración
+## Renovación de Let's Encrypt
 
-Crear un directorio de backups fuera del repositorio o que permanezca ignorado por Git. Con el stack activo:
+La renovación es una ejecución única, no un contenedor en bucle. Probar primero:
 
 ```bash
-mkdir -p backups
-docker compose -f docker-compose.prod.yml exec -T db sh -c 'exec mysqldump --default-character-set=utf8mb4 --no-tablespaces -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' > backups/mision-matematica-$(date +%F).sql
+docker compose --env-file .env -f docker-compose.prod.yml run --rm --no-deps certbot renew --dry-run
 ```
 
-Restaurar solo después de validar el dump y de detener escrituras de la aplicación:
+Programar cron con un log fuera del repositorio:
 
 ```bash
-docker compose -f docker-compose.prod.yml exec -T db sh -c 'exec mysql --default-character-set=utf8mb4 -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < backups/archivo.sql
+sudo install -d -m 750 /var/log/mision-matematica
+crontab -e
 ```
 
-Actualmente no se detectó almacenamiento persistente de uploads, PDF ni exports: los mapas, sprites y UI se compilan como assets versionados del frontend. Si se agregan archivos de usuario en el futuro, deben ir a un volumen o almacenamiento externo y entrar en el plan de backup.
+```cron
+17 3 * * * cd /opt/mision-matematica && ./scripts/renew-letsencrypt.sh >> /var/log/mision-matematica/certbot-renew.log 2>&1
+```
 
-## Codificación UTF-8
+Certbot renueva únicamente cuando corresponde; el script valida y recarga Nginx.
 
-El backend conecta a MySQL con `charset=utf8mb4`, Flask serializa JSON sin escapar Unicode, y Nginx declara `charset utf-8`. La configuración `database/docker-init/99-utf8.cnf` fija `utf8mb4` tanto para MySQL como para su cliente; la inicialización y `scripts/docker-run-sql.sh` también ejecutan el cliente con `--default-character-set=utf8mb4`. Los scripts SQL del repositorio se guardan en UTF-8.
-
-Las instalaciones creadas antes de esta configuración pueden contener texto UTF-8 interpretado como Latin-1. Antes de modificar esos datos, crear un backup y auditar desde el contenedor backend:
+## Operación y actualizaciones
 
 ```bash
-docker compose -f docker-compose.prod.yml run --rm backend python scripts/corregir_mojibake_utf8.py
+docker compose --env-file .env -f docker-compose.prod.yml ps
+docker compose --env-file .env -f docker-compose.prod.yml logs -f frontend
+docker compose --env-file .env -f docker-compose.prod.yml logs -f backend
+docker compose --env-file .env -f docker-compose.prod.yml logs -f db
+
+git pull --ff-only origin main
+docker compose --env-file .env -f docker-compose.prod.yml build
+docker compose --env-file .env -f docker-compose.prod.yml up -d
 ```
 
-Si el reporte fue revisado, aplicar la migración selectiva e idempotente:
+Para volver a un commit conocido, respaldar la base, cambiar a ese commit y repetir `build` y `up -d`. Nunca usar `docker compose down -v` en producción: elimina la base y los volúmenes de Certbot.
+
+## Base de datos y backups
+
+MySQL se inicializa solo si `mysql_data` está vacío. Migraciones históricas no se ejecutan solas. Antes de cualquier SQL incremental:
 
 ```bash
-docker compose -f docker-compose.prod.yml run --rm backend python scripts/corregir_mojibake_utf8.py --apply
+mkdir -p /opt/mision-matematica-backups
+docker compose --env-file .env -f docker-compose.prod.yml exec -T db sh -c 'exec mysqldump --default-character-set=utf8mb4 --no-tablespaces -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' > /opt/mision-matematica-backups/mision-matematica-$(date +%F).sql
 ```
 
-La herramienta solo transforma cadenas con el patrón verificable `Ã` o `Â` que pueden recuperarse de Latin-1 a UTF-8. Los caracteres de reemplazo `�` no se inventan ni se modifican automáticamente: se reportan para revisión humana.
-
-## Actualización y reversión
+Restaurar solamente dumps validados y con la aplicación sin escrituras:
 
 ```bash
-git pull origin main
-docker compose -f docker-compose.prod.yml build
-docker compose -f docker-compose.prod.yml up -d
-docker compose -f docker-compose.prod.yml ps
+docker compose --env-file .env -f docker-compose.prod.yml exec -T db sh -c 'exec mysql --default-character-set=utf8mb4 -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < /opt/mision-matematica-backups/archivo.sql
 ```
 
-Aplicar primero las migraciones manuales requeridas por la versión, respaldando la base previamente. Para revertir código, volver al commit anterior, reconstruir frontend/backend y ejecutar `up -d`; una reversión de esquema requiere una estrategia específica y el backup correspondiente.
+Guardar copia cifrada fuera del VPS y probar restauraciones. Los mapas, sprites y demás assets están versionados; no se detectó almacenamiento persistente de uploads/PDF de usuarios.
 
-## Prueba local con Docker
+## Diagnóstico
 
-```bash
-cp .env.docker.example .env
-docker compose -f docker-compose.local.yml up --build -d
-docker compose -f docker-compose.local.yml ps
-```
-
-Local publica frontend en `http://localhost:8080`, backend en `http://localhost:8000` y MySQL en `localhost:3307`, evitando conflicto con XAMPP/MySQL en 3306. Verificar login, juego, tienda, panel de estudiante, institución, secciones, asignaciones, reportes y administración antes de publicar. Para detenerlo: `docker compose -f docker-compose.local.yml down`.
-
-## Errores frecuentes
-
-- `DB_HOST=localhost`: es incorrecto dentro de Docker; debe ser `db`.
-- Frontend sin API: confirmar que el build usó `VITE_API_URL=/api`, que backend está healthy y que Nginx conserva `location /api/`.
-- Base sin datos: confirmar que se inició con volumen nuevo y revisar `docker compose ... logs db`. Los scripts de init no se repiten con un volumen existente.
-- Puerto 80 ocupado: liberar el servicio host o ajustar temporalmente el mapeo de `frontend` en el compose de producción.
-- Error de JWT en producción: definir un secreto aleatorio real; el backend bloquea valores de desarrollo cuando `APP_ENV=production`.
+- Certbot falla: confirmar DNS público, UFW, firewall del proveedor y puerto 80 libre.
+- CORS: revisar que `.env` tenga exactamente ambos orígenes HTTPS separados por coma y recrear `backend`.
+- Sin API: confirmar `VITE_API_URL=/api`, Nginx `/api/` y backend healthy.
+- IP de cliente incorrecta: `TRUST_PROXY_HEADERS=true` es seguro aquí porque Flask no se publica y Nginx reemplaza `X-Forwarded-For` con la IP remota.
+- Puerto ocupado: detener el proceso host antes de iniciar; no abrir puertos del backend o MySQL como alternativa.

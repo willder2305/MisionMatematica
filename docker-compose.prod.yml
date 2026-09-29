@@ -84,12 +84,18 @@ services:
         condition: service_healthy
     ports:
       - "80:80"
+      - "443:443"
+    environment:
+      PRIMARY_DOMAIN: ${PRIMARY_DOMAIN:-misionmatematica.com}
+    volumes:
+      - certbot_www:/var/www/certbot:ro
+      - letsencrypt_data:/etc/letsencrypt:ro
     networks:
       - mision_network
     security_opt:
       - no-new-privileges:true
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/__nginx_health || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -100,9 +106,19 @@ services:
         max-size: "10m"
         max-file: "5"
 
+  certbot:
+    image: certbot/certbot:latest
+    profiles:
+      - certbot
+    volumes:
+      - certbot_www:/var/www/certbot
+      - letsencrypt_data:/etc/letsencrypt
+
 networks:
   mision_network:
     driver: bridge
 
 volumes:
   mysql_data:
+  certbot_www:
+  letsencrypt_data:

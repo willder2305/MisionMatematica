@@ -14,7 +14,10 @@ RUN npm run build
 
 FROM nginx:1.31.5-alpine
 
-COPY deploy/docker/nginx/default.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html
+COPY deploy/docker/nginx/bootstrap.conf /etc/nginx/templates/bootstrap.conf
+COPY deploy/docker/nginx/https.conf /etc/nginx/templates/https.conf
+COPY deploy/docker/nginx/security-headers.conf /etc/nginx/includes/security-headers.conf
+COPY --chmod=755 deploy/docker/nginx/40-select-config.sh /docker-entrypoint.d/40-select-config.sh
 
-EXPOSE 80
+EXPOSE 80 443
