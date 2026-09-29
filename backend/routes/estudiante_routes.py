@@ -11,6 +11,7 @@ from services.progreso_service import (
     obtener_panel_estudiante,
     obtener_progreso_estudiante,
 )
+from services.puntuaciones_service import obtener_clasificacion_estudiante
 from services.personalizacion_service import (
     actualizar_mapa_estudiante,
     actualizar_personaje_estudiante,
@@ -91,6 +92,22 @@ def temas():
         codigo, mensaje, data, errors = obtener_contexto_juego_estudiante(usuario_actual())
         temas_data = {"temas": (data or {}).get("temas", [])} if data else None
         return _respuesta(codigo, mensaje, temas_data, errors)
+    except Error:
+        return _error_servidor()
+
+
+@estudiante_bp.route("/clasificacion", methods=["GET"])
+@roles_requeridos("estudiante")
+def clasificacion():
+    # El backend resuelve el grupo del usuario autenticado; React no envía IDs académicos.
+    try:
+        return _respuesta(*obtener_clasificacion_estudiante(
+            usuario_actual(),
+            request.args.get("tema_id"),
+            request.args.get("scope", "general"),
+            request.args.get("page", 1),
+            request.args.get("limit", 25),
+        ))
     except Error:
         return _error_servidor()
 

@@ -33,6 +33,7 @@ class AsignacionesMultitemaIntegrationTest(unittest.TestCase):
                 cursor.execute("DELETE FROM ejercicios_generados WHERE id_partida = %s", (id_partida,))
             cursor.execute("DELETE FROM partidas_juego WHERE id_usuario = %s", (self.id_usuario,))
             cursor.execute("DELETE FROM progreso_asignacion_tema_estudiante WHERE id_estudiante = %s", (self.id_usuario,))
+            cursor.execute("DELETE FROM progreso_tema_estudiante WHERE id_usuario = %s", (self.id_usuario,))
             cursor.execute("DELETE FROM progreso_estudiante WHERE id_usuario = %s", (self.id_usuario,))
             cursor.execute("DELETE FROM progreso_personal_tema WHERE id_usuario = %s", (self.id_usuario,))
             cursor.execute("DELETE FROM progreso_personal_catalogo WHERE id_usuario = %s", (self.id_usuario,))
@@ -143,6 +144,24 @@ class AsignacionesMultitemaIntegrationTest(unittest.TestCase):
             cursor.close()
             conexion.close()
 
+    def _puntuacion_por_tema(self):
+        conexion = obtener_conexion()
+        cursor = conexion.cursor(dictionary=True)
+        try:
+            cursor.execute(
+                """
+                SELECT id_tema, puntos_acumulados, aciertos_puntuados
+                FROM progreso_tema_estudiante
+                WHERE id_usuario = %s
+                ORDER BY id_tema
+                """,
+                (self.id_usuario,),
+            )
+            return cursor.fetchall()
+        finally:
+            cursor.close()
+            conexion.close()
+
     def test_lista_y_juego_respetan_el_plan_multitema(self):
         headers = self._registrar_estudiante()
         listado = self.client.get("/api/estudiante/asignaciones", headers=headers)
@@ -180,14 +199,16 @@ class AsignacionesMultitemaIntegrationTest(unittest.TestCase):
         partida = incorrecta.get_json()["data"]["partida"]
         self.assertEqual(partida["total_correctos"], 0)
         self.assertEqual(self._tema_actual(partida), primer_tema)
+        self.assertEqual(sum(fila["puntos_acumulados"] for fila in self._puntuacion_por_tema()), 0)
 
+        request_id_acierto = str(uuid4())
         acierto = self.client.post(
             f"/api/juego/partidas/{partida['id_partida']}/respuesta",
             headers=headers,
             json={
                 "id_ejercicio_generado": partida["id_ejercicio_generado_actual"],
                 "respuesta": self._respuesta_correcta(partida),
-                "request_id": str(uuid4()),
+                "request_id": request_id_acierto,
                 "tiempo_respuesta_ms": 1000,
             },
         )
@@ -195,6 +216,21 @@ class AsignacionesMultitemaIntegrationTest(unittest.TestCase):
         partida = acierto.get_json()["data"]["partida"]
         self.assertEqual(partida["total_correctos"], 1)
         self.assertIn(self._tema_actual(partida), temas_asignados)
+        self.assertEqual(sum(fila["puntos_acumulados"] for fila in self._puntuacion_por_tema()), 2)
+
+        # Repetir la misma solicitud no inserta otro intento ni vuelve a acreditar puntos.
+        repetida = self.client.post(
+            f"/api/juego/partidas/{partida['id_partida']}/respuesta",
+            headers=headers,
+            json={
+                "id_ejercicio_generado": acierto.get_json()["data"]["partida"].get("id_ejercicio_generado_actual"),
+                "respuesta": self._respuesta_correcta(partida),
+                "request_id": request_id_acierto,
+                "tiempo_respuesta_ms": 1000,
+            },
+        )
+        self.assertEqual(repetida.status_code, 200, repetida.get_json())
+        self.assertEqual(sum(fila["puntos_acumulados"] for fila in self._puntuacion_por_tema()), 2)
 
         salida = self.client.post(f"/api/juego/partidas/{partida['id_partida']}/salir", headers=headers)
         self.assertEqual(salida.status_code, 200, salida.get_json())
@@ -226,6 +262,10 @@ class AsignacionesMultitemaIntegrationTest(unittest.TestCase):
         pendientes = self.client.get("/api/estudiante/asignaciones", headers=headers)
         self.assertEqual(pendientes.status_code, 200, pendientes.get_json())
         self.assertFalse(any(item["id_asignacion"] == self.asignacion["id_asignacion"] for item in pendientes.get_json()["data"]))
+        puntuaciones = self._puntuacion_por_tema()
+        self.assertEqual(sum(fila["aciertos_puntuados"] for fila in puntuaciones), 10)
+        self.assertEqual(sum(fila["puntos_acumulados"] for fila in puntuaciones), 20)
+        self.assertTrue(all(fila["id_tema"] in temas_asignados for fila in puntuaciones))
 
 
 if __name__ == "__main__":

@@ -25,6 +25,7 @@ const MiInstitucionPage = lazy(() => import("./pages/MiInstitucionPage"));
 const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage"));
 const OnboardingPage = lazy(() => import("./pages/OnboardingPage"));
 const PanelEstudiantePage = lazy(() => import("./pages/PanelEstudiantePage"));
+const ClasificacionPage = lazy(() => import("./pages/ClasificacionPage"));
 const TiendaPage = lazy(() => import("./pages/TiendaPage"));
 const PlantillasPage = lazy(() => import("./pages/PlantillasPage"));
 const ReportesDocentePage = lazy(() => import("./pages/ReportesDocentePage"));
@@ -38,6 +39,7 @@ export const RUTAS_PRINCIPALES = [
   "/recuperar-password",
   "/onboarding",
   "/panel-estudiante",
+  "/clasificacion",
   "/mi-personaje",
   "/tienda",
   "/actividades",
@@ -120,6 +122,7 @@ const rutasPrivadas = {
   "/asignaciones": { componente: AsignacionesPage, activeSection: "asignaciones", roles: ["docente"] },
   "/reportes": { componente: ReportesDocentePage, activeSection: "reportes", roles: ["docente"] },
   "/panel-estudiante": { componente: PanelEstudiantePage, activeSection: "panel-estudiante", roles: ["estudiante"] },
+  "/clasificacion": { componente: ClasificacionPage, activeSection: "clasificacion", roles: ["estudiante"] },
   "/mi-personaje": { componente: MiPersonajePage, activeSection: "mi-personaje", roles: ["estudiante"] },
   "/tienda": { componente: TiendaPage, activeSection: "tienda", roles: ["estudiante"] },
   "/actividades": { componente: ActividadesPage, activeSection: "actividades", roles: ["estudiante"] },

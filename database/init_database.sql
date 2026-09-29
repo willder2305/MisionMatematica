@@ -722,6 +722,8 @@ CREATE TABLE IF NOT EXISTS progreso_estudiante (
     total_ejercicios INT NOT NULL DEFAULT 0,
     total_aciertos INT NOT NULL DEFAULT 0,
     total_errores INT NOT NULL DEFAULT 0,
+    puntos_acumulados INT UNSIGNED NOT NULL DEFAULT 0,
+    aciertos_puntuados INT UNSIGNED NOT NULL DEFAULT 0,
     porcentaje_aciertos DECIMAL(5,2) NOT NULL DEFAULT 0.00,
     puntos INT NOT NULL DEFAULT 0,
     mejor_puntuacion INT NOT NULL DEFAULT 0,
@@ -756,6 +758,7 @@ CREATE TABLE IF NOT EXISTS progreso_tema_estudiante (
     fecha_modificacion TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
 
     CONSTRAINT uk_progreso_tema_usuario UNIQUE (id_usuario, id_tema),
+    INDEX idx_progreso_tema_clasificacion (id_tema, puntos_acumulados, id_usuario),
     CONSTRAINT fk_progreso_tema_usuario
         FOREIGN KEY (id_usuario)
         REFERENCES usuarios(id_usuario),
@@ -1039,3 +1042,4 @@ SOURCE database/corregir_inventario_personajes.sql;
 SOURCE database/actualizar_dificultad_facil.sql;
 SOURCE database/actualizar_generacion_ortografia_y_progresion.sql;
 SOURCE database/optimizar_indices_y_seed_qa.sql;
+SOURCE database/actualizar_puntuaciones_clasificacion.sql;

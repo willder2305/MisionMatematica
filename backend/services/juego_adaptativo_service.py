@@ -37,6 +37,7 @@ from services.progreso_service import (
     listar_temas_personales,
     sincronizar_progreso_usuario,
 )
+from services.puntuaciones_service import acreditar_puntuacion_tema
 from services.personalizacion_service import (
     COSTO_CONTINUACION,
     acreditar_recompensa_partida,
@@ -1211,6 +1212,9 @@ def responder_partida_adaptativa(id_partida, datos, id_usuario_autenticado):
             ),
         )
         id_intento = cursor.lastrowid
+
+        # La clasificación usa el tema propio del ejercicio, incluso si una actividad multitema avanza después.
+        acreditar_puntuacion_tema(partida["id_usuario"], ejercicio["id_tema"], es_correcta, cursor)
 
         metricas = _obtener_metricas(partida, cursor)
         niveles = _obtener_niveles(cursor)

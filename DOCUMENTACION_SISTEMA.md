@@ -2717,3 +2717,13 @@ El juego personal evalúa la dificultad por estudiante, tema, grado y nivel. Par
 La promoción curricular solo existe en juego personal: Cuarto Difícil a Quinto Fácil y Quinto Difícil a Sexto Fácil requieren 12 intentos en Difícil, precisión mínima de 85 % y al menos 5 respuestas correctas de las últimas 6. Las actividades docentes conservan siempre su grado y su progreso separado.
 
 Regla de tres directa e inversa usa un banco procedural de 10 contextos por tipo. El generador persiste `template_key` y `context_key` dentro de sus parámetros, evita reutilizar un contexto reciente y genera el procedimiento breve validado antes de mostrar la pregunta.
+
+## Puntuación por tema y clasificación
+
+La puntuación académica está separada del monedero: una respuesta correcta válida acredita exactamente **2 puntos** al tema real del ejercicio y una incorrecta acredita **0**. No existen descuentos, puntos por iniciar o abandonar una partida, ni conversión entre puntuación y monedas. La acreditación se realiza dentro de la misma transacción que inserta `intentos_juego`; como cada intento usa un `request_id` único, repetir una solicitud devuelve el resultado existente sin volver a sumar.
+
+`progreso_tema_estudiante` conserva el acumulado global por estudiante y tema mediante `puntos_acumulados` y `aciertos_puntuados`. Los progresos personal y de asignación siguen separados para dificultad y avance académico. En una actividad multitema, el sistema toma `ejercicios_generados.id_tema`, por lo que los puntos no se atribuyen al último tema de la partida si esta avanzó después de responder.
+
+La migración incremental `database/actualizar_puntuaciones_clasificacion.sql` agrega los campos e índice necesarios y reconstruye el acumulado desde todos los intentos correctos existentes. La reconstrucción fija el valor derivado en vez de incrementarlo, por lo que es reconciliable e idempotente.
+
+La vista estudiantil **Clasificación** consulta `GET /api/estudiante/clasificacion` con `tema_id`, `scope`, `page` y `limit`. La clasificación general incluye estudiantes activos con puntuación positiva; el perfil actual se devuelve aparte incluso con 0 puntos. Para `scope=grupo`, el backend resuelve institución, grado y sección desde `perfiles_estudiante` y valida que estén activos; el frontend no envía identificadores de grupo. Las filas exponen únicamente nombre, personaje activo, tema y puntuación.

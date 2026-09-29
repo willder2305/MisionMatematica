@@ -12,6 +12,7 @@ const navItems = [
   { href: "/actividades", label: "Actividades", key: "actividades", mark: "A", roles: ["estudiante"], modalidades: ["grupo_educativo"] },
   { href: "/mi-personaje", label: "Mi personaje", key: "mi-personaje", mark: "P", roles: ["estudiante"] },
   { href: "/tienda", label: "Tienda", key: "tienda", mark: "T", roles: ["estudiante"] },
+  { href: "/clasificacion", label: "Clasificación", key: "clasificacion", mark: "C", roles: ["estudiante"] },
   { href: "/panel-estudiante", label: "Panel", key: "panel-estudiante", mark: "I", roles: ["estudiante"] },
   { href: "/admin", label: "Admin", key: "admin", mark: "A", roles: ["administrador"] },
   { href: "/mi-institucion", label: "Mi institución", key: "mi-institucion", mark: "I", roles: ["docente"] },

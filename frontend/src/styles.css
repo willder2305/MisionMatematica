@@ -3243,3 +3243,87 @@ input[type="datetime-local"] {
     padding-top: 0.5rem;
   }
 }
+
+/* Clasificación estudiantil: tabla amplia y tarjetas legibles en móvil. */
+.classification-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.classification-controls {
+  align-items: end;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(220px, 1fr) minmax(220px, 0.8fr);
+}
+
+.classification-controls label,
+.classification-score {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.classification-controls label > span,
+.classification-score > span {
+  color: var(--mm-blue-800);
+  font-weight: 900;
+}
+
+.classification-score {
+  background: #e7f8df;
+  border: 2px solid #57a73d;
+  min-height: 50px;
+  padding: 0.7rem 0.85rem;
+}
+
+.classification-score strong { color: #176b26; font-size: 1.25rem; }
+
+.classification-tabs {
+  border-bottom: 2px solid var(--mm-border);
+  display: flex;
+  gap: 0.3rem;
+}
+
+.classification-tabs button {
+  background: #eaf6ff;
+  border: 2px solid var(--mm-border);
+  border-bottom: 0;
+  border-radius: 7px 7px 0 0;
+  box-shadow: none;
+  color: var(--mm-blue-800);
+  min-height: 44px;
+}
+
+.classification-tabs button.is-active {
+  background: #e2f9dc;
+  border-color: #57a73d;
+  color: #176b26;
+}
+
+.classification-results { display: grid; gap: 1rem; }
+.classification-results h2 { margin: 0; }
+.classification-table-wrap { overflow-x: auto; }
+.classification-table { border-collapse: collapse; min-width: 680px; width: 100%; }
+.classification-table th,
+.classification-table td { border-bottom: 1px solid #b9d9ef; padding: 0.75rem; text-align: left; vertical-align: middle; }
+.classification-table th { background: #eaf6ff; color: var(--mm-blue-800); }
+.classification-character { align-items: center; display: inline-flex; gap: 0.55rem; min-width: 0; }
+.classification-character img { height: 44px; object-fit: contain; width: 44px; }
+.classification-cards { display: none; }
+.classification-pagination { align-items: center; display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: flex-end; }
+.classification-pagination span { font-weight: 800; }
+
+@media (max-width: 767px) {
+  .classification-controls { grid-template-columns: 1fr; }
+  .classification-table-wrap { display: none; }
+  .classification-cards { display: grid; gap: 0.7rem; }
+  .classification-cards article {
+    background: #fffdf8;
+    border: 2px solid #9ac6e9;
+    display: grid;
+    gap: 0.4rem;
+    padding: 0.8rem;
+  }
+  .classification-cards article > strong { color: #176b26; font-size: 1.1rem; }
+  .classification-pagination { justify-content: space-between; }
+}
