@@ -1,1 +1,2 @@
 database/docker-init/*.sh text eol=lf
+deploy/docker/nginx/*.sh text eol=lf
