@@ -441,6 +441,7 @@ CREATE TABLE IF NOT EXISTS partidas_juego (
         REFERENCES usuarios(id_usuario),
 
     CONSTRAINT uk_partidas_request_id UNIQUE (request_id)
+    ,INDEX idx_partidas_usuario_tema (id_usuario, id_tema, id_partida)
 );
 
 CREATE TABLE IF NOT EXISTS temas (
@@ -657,6 +658,7 @@ CREATE TABLE IF NOT EXISTS intentos_juego (
     respuesta_api_json JSON NULL,
 
     CONSTRAINT uk_intentos_request_id UNIQUE (request_id),
+    INDEX idx_intentos_partida_fecha_id (id_partida, fecha_respuesta, id_intento),
     CONSTRAINT fk_intentos_partidas
         FOREIGN KEY (id_partida)
         REFERENCES partidas_juego(id_partida),

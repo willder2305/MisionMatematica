@@ -20,6 +20,7 @@ GRUPOS_ROUTES = ROOT / "backend" / "routes" / "grupos_routes.py"
 APP_PY = ROOT / "backend" / "app.py"
 ASIGNACIONES_PAGE_JSX = ROOT / "frontend" / "src" / "pages" / "AsignacionesPage.jsx"
 REPORTES_DOCENTE_PAGE_JSX = ROOT / "frontend" / "src" / "pages" / "ReportesDocentePage.jsx"
+REPORTES_ADMIN_PAGE_JSX = ROOT / "frontend" / "src" / "pages" / "ReportesAdminPage.jsx"
 ADMIN_PAGE_JSX = ROOT / "frontend" / "src" / "pages" / "AdminPage.jsx"
 ADMIN_SERVICE_JS = ROOT / "frontend" / "src" / "services" / "adminService.js"
 ADMIN_ROUTES = ROOT / "backend" / "routes" / "admin_routes.py"
@@ -166,6 +167,15 @@ class FrontendRoutingContractTest(unittest.TestCase):
         self.assertIn("/admin/reportes/institucional", servicio)
         self.assertIn('"/reportes/filtros"', rutas)
         self.assertIn('"/reportes/institucional"', rutas)
+
+    def test_reportes_globales_admin_usan_la_ruta_canonica(self):
+        pagina = REPORTES_ADMIN_PAGE_JSX.read_text(encoding="utf-8")
+        servicio = ADMIN_SERVICE_JS.read_text(encoding="utf-8")
+        rutas = ADMIN_ROUTES.read_text(encoding="utf-8")
+        self.assertIn("obtenerReporteEstudiantesAdmin", pagina)
+        self.assertIn("Mejora", pagina)
+        self.assertIn("/admin/reportes/estudiantes", servicio)
+        self.assertIn('"/reportes/estudiantes"', rutas)
 
 
 if __name__ == "__main__":

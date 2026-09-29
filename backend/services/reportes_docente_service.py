@@ -2,6 +2,7 @@ from datetime import datetime
 
 from db import obtener_conexion
 from services.progreso_service import sincronizar_progreso_usuario
+from services.report_metrics_service import aplicar_metricas_reporte, calcular_porcentaje
 
 
 def _serializar_fecha(valor):
@@ -11,7 +12,7 @@ def _serializar_fecha(valor):
 
 def _porcentaje(aciertos, intentos):
     # Calcula porcentaje de aciertos sin dividir entre cero.
-    return round((aciertos / intentos) * 100, 2) if intentos else 0
+    return calcular_porcentaje(aciertos, intentos)
 
 
 def _parse_fecha(valor, campo, errores):
@@ -149,29 +150,6 @@ def _sincronizar_estudiantes_visibles(usuario, cursor):
     # Recalcula progreso para que el panel use datos consistentes.
     for id_usuario in _estudiantes_visibles(usuario, cursor):
         sincronizar_progreso_usuario(id_usuario, cursor)
-
-
-def _errores_consecutivos(id_usuario, id_tema, cursor):
-    # Cuenta errores consecutivos recientes por estudiante y tema.
-    cursor.execute(
-        """
-        SELECT i.es_correcta
-        FROM intentos_juego i
-        INNER JOIN partidas_juego p ON p.id_partida = i.id_partida
-        WHERE p.id_usuario = %s
-          AND p.id_tema = %s
-          AND p.tipo_contexto = 'asignacion'
-        ORDER BY i.fecha_respuesta DESC, i.id_intento DESC
-        LIMIT 10
-        """,
-        (id_usuario, id_tema),
-    )
-    total = 0
-    for fila in cursor.fetchall():
-        if fila["es_correcta"]:
-            break
-        total += 1
-    return total
 
 
 def listar_estudiantes_docente(usuario):
@@ -457,7 +435,6 @@ def obtener_reporte_agente(usuario, filtros):
             aciertos = int(fila.get("aciertos") or 0)
             errores_total = int(fila.get("errores") or 0)
             porcentaje = _porcentaje(aciertos, intentos)
-            consecutivos = _errores_consecutivos(fila["id_usuario"], fila["id_tema"], cursor)
             item = {
                 "id_usuario": fila["id_usuario"],
                 "estudiante": f"{fila['nombres']} {fila['apellidos']}",
@@ -469,12 +446,25 @@ def obtener_reporte_agente(usuario, filtros):
                 "aciertos": aciertos,
                 "errores": errores_total,
                 "porcentaje_aciertos": porcentaje,
-                "errores_consecutivos": consecutivos,
+                "errores_consecutivos": 0,
                 "refuerzos": int(fila.get("refuerzos") or 0),
                 "cambios_nivel": int(fila.get("cambios_nivel") or 0),
                 "ultima_practica": _serializar_fecha(fila.get("ultima_practica")),
             }
             temas_dificultad.append(item)
+        aplicar_metricas_reporte(
+            cursor,
+            temas_dificultad,
+            datos,
+            campo_estudiante="id_usuario",
+            condicion_partidas=condicion,
+            parametros_partidas=parametros,
+        )
+        alertas = []
+        for item in temas_dificultad:
+            intentos = item["intentos"]
+            porcentaje = item["porcentaje_aciertos"]
+            consecutivos = item["errores_consecutivos"]
             if intentos >= 3 and porcentaje < 60:
                 alertas.append({"tipo": "bajo_rendimiento", "mensaje": "Porcentaje bajo de aciertos.", **item})
             elif consecutivos >= 2:

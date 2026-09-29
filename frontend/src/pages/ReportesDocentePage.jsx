@@ -28,6 +28,7 @@ const filtrosIniciales = {
 };
 
 const formatearPorcentaje = (valor) => `${Number(valor || 0).toFixed(2)}%`;
+const formatearMejora = (fila) => fila.improvement_status === "suficiente" ? `${Number(fila.improvement_percentage).toFixed(2)} pp` : "Sin datos suficientes";
 
 const formatearTiempo = (milisegundos) => {
   const segundosTotales = Math.floor(Number(milisegundos || 0) / 1000);
@@ -360,9 +361,9 @@ const ReportesDocentePage = () => {
       </section>
 
       <section className="table-section">
-        <h2>Estudiantes</h2>
-        {estudiantes.length === 0 ? (
-          <PixelEmptyState title="No hay estudiantes vinculados." description="Los estudiantes aparecerán al ingresar con un PIN de acceso." />
+        <h2>Progreso por tema</h2>
+        {(reporte?.temas_dificultad || []).length === 0 ? (
+          <PixelEmptyState title="No hay actividad para estos filtros." description="Los datos aparecerán cuando los estudiantes completen intentos." />
         ) : (
           <div className="table-wrapper">
             <table>
@@ -370,25 +371,25 @@ const ReportesDocentePage = () => {
                 <tr>
                   <th>Estudiante</th>
                   <th>Grado</th>
-                  <th>Sección</th>
-                  <th>Partidas</th>
+                  <th>Tema</th>
                   <th>Intentos</th>
-                  <th>Aciertos</th>
-                  <th>Pendientes</th>
+                  <th>Acierto</th>
+                  <th>Mejora</th>
+                  <th>Nivel actual</th>
                   <th>Última actividad</th>
                 </tr>
               </thead>
               <tbody>
-                {estudiantes.map((estudiante) => (
-                  <tr key={estudiante.id_perfil_estudiante}>
-                    <td>{estudiante.nombres} {estudiante.apellidos}</td>
-                    <td>{estudiante.grado || "Sin grado"}</td>
-                    <td>{estudiante.seccion || "Todas las secciones"}</td>
-                    <td>{estudiante.total_partidas}</td>
-                    <td>{estudiante.total_ejercicios}</td>
-                    <td>{formatearPorcentaje(estudiante.porcentaje_aciertos)}</td>
-                    <td>{estudiante.asignaciones_pendientes}</td>
-                    <td>{formatDateTime(estudiante.ultima_actividad, "Sin actividad")}</td>
+                {reporte.temas_dificultad.map((fila) => (
+                  <tr key={`${fila.id_usuario}-${fila.id_tema}`}>
+                    <td>{fila.estudiante}</td>
+                    <td>{fila.grado}</td>
+                    <td>{formatLabel(fila.tema)}</td>
+                    <td>{fila.intentos}</td>
+                    <td>{formatearPorcentaje(fila.porcentaje_aciertos)}</td>
+                    <td>{formatearMejora(fila)}</td>
+                    <td>{fila.nivel_actual}</td>
+                    <td>{formatDateTime(fila.ultima_practica, "Sin actividad")}</td>
                   </tr>
                 ))}
               </tbody>

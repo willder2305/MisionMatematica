@@ -25,7 +25,7 @@ def _nombre_archivo(prefijo, extension):
     return f"{prefijo}_{date.today().isoformat()}.{extension}"
 
 
-def generar_xlsx(titulo, columnas, filas, prefijo):
+def generar_xlsx(titulo, columnas, filas, prefijo, metadata=None):
     """Construye una hoja XLSX con cabeceras legibles y datos ya autorizados."""
     libro = Workbook()
     hoja = libro.active
@@ -34,15 +34,20 @@ def generar_xlsx(titulo, columnas, filas, prefijo):
     hoja.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(columnas))
     hoja["A1"].font = Font(bold=True, color="FFFFFF", size=14)
     hoja["A1"].fill = PatternFill("solid", fgColor="07599C")
+    fila_encabezado = 2
+    if metadata:
+        hoja.append([metadata])
+        hoja.merge_cells(start_row=2, start_column=1, end_row=2, end_column=len(columnas))
+        fila_encabezado = 3
     hoja.append([etiqueta for _, etiqueta in columnas])
-    for celda in hoja[2]:
+    for celda in hoja[fila_encabezado]:
         celda.font = Font(bold=True, color="FFFFFF")
         celda.fill = PatternFill("solid", fgColor="0875C9")
     for fila in filas:
         hoja.append([_texto_seguro(fila.get(clave)) for clave, _ in columnas])
-    hoja.freeze_panes = "A3"
-    hoja.auto_filter.ref = hoja.dimensions
-    for indice, columna in enumerate(hoja.iter_cols(min_row=2), start=1):
+    hoja.freeze_panes = f"A{fila_encabezado + 1}"
+    hoja.auto_filter.ref = f"A{fila_encabezado}:{get_column_letter(len(columnas))}{hoja.max_row}"
+    for indice, columna in enumerate(hoja.iter_cols(min_row=fila_encabezado), start=1):
         letra = get_column_letter(indice)
         ancho = min(max(max(len(str(celda.value or "")) for celda in columna) + 2, 12), 34)
         hoja.column_dimensions[letra].width = ancho
@@ -52,7 +57,7 @@ def generar_xlsx(titulo, columnas, filas, prefijo):
     return salida, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", _nombre_archivo(prefijo, "xlsx")
 
 
-def generar_pdf(titulo, columnas, filas, prefijo):
+def generar_pdf(titulo, columnas, filas, prefijo, metadata=None):
     """Construye un PDF tabular con la misma información autorizada del reporte."""
     salida = BytesIO()
     documento = SimpleDocTemplate(salida, pagesize=landscape(letter), rightMargin=0.35 * inch, leftMargin=0.35 * inch)
@@ -76,17 +81,21 @@ def generar_pdf(titulo, columnas, filas, prefijo):
         ("TOPPADDING", (0, 0), (-1, -1), 4),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
     ]))
-    documento.build([Paragraph(escape(titulo), estilos["Title"]), Spacer(1, 0.18 * inch), tabla])
+    elementos = [Paragraph(escape(titulo), estilos["Title"])]
+    if metadata:
+        elementos.extend([Spacer(1, 0.06 * inch), Paragraph(escape(metadata), estilos["BodyText"])])
+    elementos.extend([Spacer(1, 0.18 * inch), tabla])
+    documento.build(elementos)
     salida.seek(0)
     return salida, "application/pdf", _nombre_archivo(prefijo, "pdf")
 
 
-def exportar_reporte(formato, titulo, columnas, filas, prefijo):
+def exportar_reporte(formato, titulo, columnas, filas, prefijo, metadata=None):
     """Devuelve el archivo descargable solicitado o None cuando no hay filas exportables."""
     if not filas:
         return None
     if formato == "xlsx":
-        return generar_xlsx(titulo, columnas, filas, prefijo)
+        return generar_xlsx(titulo, columnas, filas, prefijo, metadata)
     if formato == "pdf":
-        return generar_pdf(titulo, columnas, filas, prefijo)
+        return generar_pdf(titulo, columnas, filas, prefijo, metadata)
     raise ValueError("Formato de exportación no permitido.")

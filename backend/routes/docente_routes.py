@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from flask import Blueprint, jsonify, request, send_file
 from mysql.connector import Error
 
@@ -41,6 +43,16 @@ def _error_servidor():
         "data": None,
         "errors": {},
     }), 500
+
+
+def _metadata_reporte_docente(args):
+    # Hace visible el período y filtros que definieron las métricas exportadas.
+    etiquetas = {
+        "id_institucion_grado": "Grado", "id_seccion": "Sección", "id_estudiante": "Estudiante",
+        "id_tema": "Tema", "id_asignacion": "Asignación", "fecha_inicio": "Desde", "fecha_fin": "Hasta",
+    }
+    filtros = [f"{etiquetas[clave]}: {args.get(clave)}" for clave in etiquetas if args.get(clave)]
+    return f"Generado: {datetime.now().strftime('%Y-%m-%d %H:%M')} | Filtros: {'; '.join(filtros) if filtros else 'Todos'}"
 
 
 @docente_bp.route("/panel", methods=["GET"])
@@ -94,10 +106,17 @@ def exportar_reporte_agente(formato):
         columnas = [
             ("estudiante", "Estudiante"), ("grado", "Grado"), ("tema", "Tema"),
             ("intentos", "Intentos"), ("aciertos", "Aciertos"), ("errores", "Errores"),
-            ("porcentaje_aciertos", "Porcentaje"), ("nivel_actual", "Nivel"),
+            ("porcentaje_aciertos", "Acierto"), ("mejora", "Mejora"), ("nivel_actual", "Nivel actual"),
             ("ultima_practica", "Última actividad"),
         ]
-        archivo = exportar_reporte(formato, "Reporte docente", columnas, reporte.get("temas_dificultad", []), "reporte_docente")
+        archivo = exportar_reporte(
+            formato,
+            "Misión Matemática / Reporte docente",
+            columnas,
+            reporte.get("temas_dificultad", []),
+            "reporte_docente",
+            _metadata_reporte_docente(request.args),
+        )
         if not archivo:
             return _respuesta("datos_invalidos", "No hay datos para exportar.", None, {})
         contenido, mimetype, nombre = archivo

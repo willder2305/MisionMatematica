@@ -2,6 +2,7 @@ import json
 from datetime import datetime
 
 from db import obtener_conexion
+from services.report_metrics_service import SIN_DATOS_SUFFICIENTES, SIN_PROGRESO_REGISTRADO, aplicar_metricas_reporte
 
 
 ESTADOS_USUARIO = ("activo", "inactivo", "bloqueado")
@@ -48,6 +49,11 @@ def _entero(valor, campo, errores, requerido=True):
         if requerido:
             errores[campo] = "Campo obligatorio."
         return None
+    try:
+        return int(valor)
+    except (TypeError, ValueError):
+        errores[campo] = "Valor invalido."
+        return None
 
 
 def _parse_fecha_reporte(valor, campo, errores):
@@ -59,13 +65,6 @@ def _parse_fecha_reporte(valor, campo, errores):
     except ValueError:
         errores[campo] = "Fecha invalida."
         return None
-    try:
-        return int(valor)
-    except (TypeError, ValueError):
-        errores[campo] = "Valor invalido."
-        return None
-
-
 def _serializar_usuario(fila):
     # Expone datos administrativos sin hashes ni tokens.
     return {
@@ -230,10 +229,34 @@ def cambiar_estado_usuario(id_usuario, estado, id_admin):
     conexion = obtener_conexion()
     cursor = conexion.cursor(dictionary=True)
     try:
-        cursor.execute("UPDATE usuarios SET estado = %s WHERE id_usuario = %s", (estado, id_usuario))
-        if cursor.rowcount == 0:
-            conexion.rollback()
+        cursor.execute(
+            """
+            SELECT u.id_usuario, u.estado, r.nombre AS rol
+            FROM usuarios u
+            INNER JOIN roles r ON r.id_rol = u.id_rol
+            WHERE u.id_usuario = %s
+            """,
+            (id_usuario,),
+        )
+        usuario = cursor.fetchone()
+        if not usuario:
             return "no_existe", "El usuario solicitado no existe.", None, {}
+        if usuario["rol"] == "administrador" and usuario["estado"] != "activo" and estado == "activo":
+            cursor.execute(
+                """
+                SELECT 1
+                FROM usuarios u
+                INNER JOIN roles r ON r.id_rol = u.id_rol
+                WHERE r.nombre = 'administrador' AND u.estado = 'activo' AND u.id_usuario <> %s
+                LIMIT 1
+                """,
+                (id_usuario,),
+            )
+            if cursor.fetchone():
+                return "conflicto", "Ya existe un administrador activo en el sistema.", None, {}
+        if usuario["rol"] == "administrador" and usuario["estado"] == "activo" and estado != "activo":
+            return "datos_invalidos", "No puede desactivar al único administrador activo.", None, {"estado": "Accion no permitida."}
+        cursor.execute("UPDATE usuarios SET estado = %s WHERE id_usuario = %s", (estado, id_usuario))
         if estado != "activo":
             cursor.execute(
                 "UPDATE refresh_tokens SET estado = 'revocado', fecha_revocacion = CURRENT_TIMESTAMP WHERE id_usuario = %s",
@@ -263,10 +286,32 @@ def cambiar_rol_usuario(id_usuario, rol, id_admin):
         fila_rol = cursor.fetchone()
         if not fila_rol:
             return "datos_invalidos", "Rol no disponible.", None, {"rol": "Rol no configurado."}
-        cursor.execute("UPDATE usuarios SET id_rol = %s WHERE id_usuario = %s", (fila_rol["id_rol"], id_usuario))
-        if cursor.rowcount == 0:
-            conexion.rollback()
+        cursor.execute(
+            """
+            SELECT u.estado, r.nombre AS rol
+            FROM usuarios u
+            INNER JOIN roles r ON r.id_rol = u.id_rol
+            WHERE u.id_usuario = %s
+            """,
+            (id_usuario,),
+        )
+        usuario = cursor.fetchone()
+        if not usuario:
             return "no_existe", "El usuario solicitado no existe.", None, {}
+        if rol == "administrador" and usuario["estado"] == "activo" and usuario["rol"] != "administrador":
+            cursor.execute(
+                """
+                SELECT 1 FROM usuarios u
+                INNER JOIN roles r ON r.id_rol = u.id_rol
+                WHERE r.nombre = 'administrador' AND u.estado = 'activo'
+                LIMIT 1
+                """
+            )
+            if cursor.fetchone():
+                return "conflicto", "Ya existe un administrador activo en el sistema.", None, {}
+        if usuario["rol"] == "administrador" and rol != "administrador" and usuario["estado"] == "activo":
+            return "datos_invalidos", "No puede cambiar el rol del único administrador activo.", None, {"rol": "Accion no permitida."}
+        cursor.execute("UPDATE usuarios SET id_rol = %s WHERE id_usuario = %s", (fila_rol["id_rol"], id_usuario))
         conexion.commit()
         return "actualizado", "Rol de usuario actualizado.", {"id_usuario": id_usuario, "rol": rol}, {}
     except Exception:
@@ -743,6 +788,9 @@ def _validar_filtros_reporte_admin(filtros):
     modalidad = (filtros.get("modalidad") or "").strip()
     if modalidad not in ("", "institucional", "independiente"):
         errores["modalidad"] = "Modalidad invalida."
+    limite = _entero(filtros.get("limite") or 50, "limite", errores)
+    if limite not in (25, 50):
+        errores["limite"] = "El límite debe ser 25 o 50."
     datos = {
         "modalidad": modalidad,
         "id_institucion": _entero(filtros.get("id_institucion"), "id_institucion", errores, requerido=False),
@@ -753,9 +801,10 @@ def _validar_filtros_reporte_admin(filtros):
         "id_estudiante": _entero(filtros.get("id_estudiante"), "id_estudiante", errores, requerido=False),
         "id_tema": _entero(filtros.get("id_tema"), "id_tema", errores, requerido=False),
         "id_asignacion": _entero(filtros.get("id_asignacion"), "id_asignacion", errores, requerido=False),
+        "buscar_estudiante": (filtros.get("buscar_estudiante") or "").strip()[:120],
         "fecha_inicio": _parse_fecha_reporte(filtros.get("fecha_inicio"), "fecha_inicio", errores),
         "fecha_fin": _parse_fecha_reporte(filtros.get("fecha_fin"), "fecha_fin", errores),
-        "limite": min(max(_entero(filtros.get("limite") or 50, "limite", errores) or 50, 1), 200),
+        "limite": limite or 50,
         "offset": max(_entero(filtros.get("offset") or 0, "offset", errores) or 0, 0),
     }
     if "id_grupo" in filtros and filtros.get("id_grupo") not in (None, ""):
@@ -767,7 +816,7 @@ def _validar_filtros_reporte_admin(filtros):
 
 def _where_reporte_admin(filtros):
     # Construye filtros SQL del reporte institucional usando el modelo nuevo.
-    condiciones = ["p.id_usuario IS NOT NULL"]
+    condiciones = ["r.nombre = 'estudiante'", "est.estado = 'activo'"]
     parametros = []
     if filtros["modalidad"] == "institucional":
         condiciones.append("pe.modalidad = 'grupo_educativo'")
@@ -789,8 +838,12 @@ def _where_reporte_admin(filtros):
         condiciones.append("a.id_docente = %s")
         parametros.append(filtros["id_docente"])
     if filtros["id_estudiante"]:
-        condiciones.append("p.id_usuario = %s")
+        condiciones.append("est.id_usuario = %s")
         parametros.append(filtros["id_estudiante"])
+    if filtros["buscar_estudiante"]:
+        condiciones.append("(est.nombres LIKE %s OR est.apellidos LIKE %s OR est.correo LIKE %s)")
+        termino = f"%{filtros['buscar_estudiante']}%"
+        parametros.extend([termino, termino, termino])
     if filtros["id_tema"]:
         condiciones.append("p.id_tema = %s")
         parametros.append(filtros["id_tema"])
@@ -809,9 +862,10 @@ def _where_reporte_admin(filtros):
 def _from_reporte_admin():
     # Define el origen comun de reportes sin usar grupos como eje.
     return """
-        FROM partidas_juego p
-        INNER JOIN usuarios est ON est.id_usuario = p.id_usuario
-        LEFT JOIN perfiles_estudiante pe ON pe.id_usuario = p.id_usuario
+        FROM usuarios est
+        INNER JOIN roles r ON r.id_rol = est.id_rol
+        LEFT JOIN perfiles_estudiante pe ON pe.id_usuario = est.id_usuario
+        LEFT JOIN partidas_juego p ON p.id_usuario = est.id_usuario
         LEFT JOIN asignaciones a ON a.id_asignacion = p.id_asignacion
         LEFT JOIN institucion_grados ig ON ig.id_institucion_grado = COALESCE(a.id_institucion_grado, pe.id_institucion_grado)
         LEFT JOIN instituciones inst ON inst.id_institucion = ig.id_institucion
@@ -983,7 +1037,7 @@ def obtener_reporte_institucional_admin(filtros=None):
         cursor.execute(
             f"""
             SELECT COUNT(DISTINCT p.id_partida) AS partidas,
-                   COUNT(DISTINCT p.id_usuario) AS estudiantes,
+                   COUNT(DISTINCT est.id_usuario) AS estudiantes,
                    COUNT(ij.id_intento) AS intentos,
                    COALESCE(SUM(CASE WHEN ij.es_correcta = 1 THEN 1 ELSE 0 END), 0) AS correctos,
                    COALESCE(SUM(CASE WHEN ij.es_correcta = 0 THEN 1 ELSE 0 END), 0) AS incorrectos,
@@ -1000,9 +1054,9 @@ def obtener_reporte_institucional_admin(filtros=None):
 
         cursor.execute(
             f"""
-            SELECT p.id_usuario AS id_estudiante,
+            SELECT est.id_usuario AS id_estudiante,
                    CONCAT(est.nombres, ' ', est.apellidos) AS estudiante,
-                   CASE WHEN pe.modalidad = 'grupo_educativo' THEN 'Institucional' ELSE 'Independiente' END AS modalidad,
+                   CASE WHEN pe.modalidad = 'grupo_educativo' THEN 'Institución' ELSE 'Independiente' END AS modalidad,
                    inst.id_institucion,
                    inst.nombre AS institucion,
                    a.id_docente,
@@ -1029,7 +1083,7 @@ def obtener_reporte_institucional_admin(filtros=None):
                    MAX(da.fecha_decision) AS fecha_decision
             {origen}
             WHERE {where}
-            GROUP BY p.id_usuario, estudiante, modalidad, inst.id_institucion, inst.nombre,
+            GROUP BY est.id_usuario, estudiante, modalidad, inst.id_institucion, inst.nombre,
                      a.id_docente, docente, gb.id_grado, gb.nombre_grado,
                      ig.id_institucion_grado, sec.id_seccion, sec.nombre_seccion,
                      a.id_asignacion, a.nombre, t.id_tema, t.nombre_tema
@@ -1058,13 +1112,16 @@ def obtener_reporte_institucional_admin(filtros=None):
                 "id_asignacion": fila.get("id_asignacion"),
                 "asignacion": fila.get("asignacion"),
                 "id_tema": fila.get("id_tema"),
-                "tema": fila.get("tema"),
+                "tema": fila.get("tema") or "Sin actividad",
                 "intentos": fila_intentos,
                 "correctos": fila_correctos,
                 "incorrectos": int(fila.get("incorrectos") or 0),
                 "precision": round((fila_correctos / fila_intentos) * 100, 2) if fila_intentos else 0,
                 "partidas_completadas": int(fila.get("partidas_completadas") or 0),
-                "nivel_actual": fila.get("nivel_actual"),
+                "nivel_actual": fila.get("nivel_actual") or SIN_PROGRESO_REGISTRADO,
+                "improvement_percentage": None,
+                "improvement_status": "sin_datos_suficientes",
+                "mejora": SIN_DATOS_SUFFICIENTES,
                 "ultima_actividad": _serializar_fecha(fila.get("ultima_actividad")),
                 "ultima_decision": fila.get("ultima_decision"),
                 "nivel_anterior": fila.get("nivel_anterior"),
@@ -1072,8 +1129,20 @@ def obtener_reporte_institucional_admin(filtros=None):
                 "motivo": fila.get("motivo"),
                 "fecha_decision": _serializar_fecha(fila.get("fecha_decision")),
             })
+        aplicar_metricas_reporte(cursor, filas, datos)
 
-        cursor.execute(f"SELECT COUNT(DISTINCT p.id_partida) AS total {origen} WHERE {where}", tuple(parametros))
+        cursor.execute(
+            f"""
+            SELECT COUNT(*) AS total
+            FROM (
+                SELECT est.id_usuario, p.id_tema, COALESCE(p.id_asignacion, 0)
+                {origen}
+                WHERE {where}
+                GROUP BY est.id_usuario, p.id_tema, COALESCE(p.id_asignacion, 0)
+            ) AS filas_reporte
+            """,
+            tuple(parametros),
+        )
         total = int((cursor.fetchone() or {}).get("total") or 0)
         return "consultado", "Reporte institucional consultado correctamente.", {
             "resumen": {

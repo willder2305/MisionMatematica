@@ -59,6 +59,24 @@ Los reportes filtrados del docente y del administrador pueden descargarse en PDF
 
 Las asignaciones creadas o editadas siempre guardan diez ejercicios. La interfaz ya no solicita esa cantidad y `backend/services/asignaciones_service.py` ignora cualquier valor que un cliente alterado intente enviar.
 
+### Administrador único y reportes globales
+
+El sistema mantiene un único administrador activo. La cuenta canónica usa el correo `admin@misionmatematica.com`, nombres `Administrador Misión Matemática` y el rol `administrador`. `backend/scripts/bootstrap_admin.py` es idempotente: crea la cuenta solo si no existe, conserva hashes existentes, activa la cuenta canónica y desactiva administradores activos adicionales sin eliminarlos. El registro público continúa limitado a docente y estudiante; además, las rutas administrativas rechazan con HTTP `409` cualquier intento de activar o promover otro administrador mientras ya exista uno activo.
+
+En una instalación nueva, ejecutar una vez tras inicializar la base:
+
+```bash
+python backend/scripts/bootstrap_admin.py
+```
+
+La contraseña segura se genera únicamente al crear la cuenta y se muestra en esa terminal una sola vez. Para una rotación deliberada y auditable, ejecutar el mismo comando con `--reset-password`; la nueva contraseña vuelve a aparecer exclusivamente en la terminal que ejecuta el operador. Nunca se guarda en documentos, SQL, variables de entorno, logs de aplicación ni repositorio.
+
+Los reportes globales del administrador usan `GET /api/admin/reportes/estudiantes`, con exportaciones en `/api/admin/reportes/estudiantes/pdf` y `/api/admin/reportes/estudiantes/excel`. Las rutas institucionales anteriores se mantienen como alias de compatibilidad. El administrador puede filtrar modalidad, institución, grado, tema, estudiante y período; el backend pagina a 25 o 50 filas desde el servidor.
+
+`backend/services/report_metrics_service.py` es la fuente común para administrador, docente y ambos formatos de exportación. La precisión es `aciertos / intentos * 100` redondeada a dos decimales. La mejora compara, por estudiante y tema, la precisión de los últimos diez intentos con la de los diez inmediatamente anteriores: el resultado se expresa en puntos porcentuales (`pp`) y requiere 20 intentos del período filtrado; con 19 o menos devuelve `Sin datos suficientes`. El nivel actual se lee de `progreso_tema_estudiante`; si no existe registro, se presenta `Sin progreso registrado`.
+
+Para bases ya existentes se aplica una vez `database/actualizar_reportes_globales.sql`. La instalación limpia recibe los índices equivalentes desde `database/init_database.sql`.
+
 ### Propiedad de personajes y compras
 
 El catálogo usa `tienda_items.id_item` como identificador persistente y `item_key` como clave técnica estable. `usuario_items` mantiene una única relación por usuario e ítem mediante su restricción única; solo una relación con estado `activo` representa propiedad. Si una relación histórica está `inactivo`, una compra válida la reactiva en la misma transacción que descuenta el saldo y registra el movimiento de monedas, sin insertar una fila duplicada.

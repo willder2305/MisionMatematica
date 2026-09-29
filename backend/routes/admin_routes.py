@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from flask import Blueprint, jsonify, request, send_file
 from mysql.connector import Error
 
@@ -37,6 +39,7 @@ def _codigo_http(codigo):
         "datos_invalidos": 400,
         "no_autorizado": 403,
         "no_existe": 404,
+        "conflicto": 409,
     }.get(codigo, 400)
 
 
@@ -58,6 +61,16 @@ def _error_servidor():
         "data": None,
         "errors": {},
     }), 500
+
+
+def _metadata_reporte_global(args):
+    # Anota fecha y filtros legibles en ambos formatos de exportación.
+    etiquetas = {
+        "modalidad": "Modalidad", "id_institucion": "Institución", "id_grado_base": "Grado",
+        "id_tema": "Tema", "buscar_estudiante": "Estudiante", "fecha_inicio": "Desde", "fecha_fin": "Hasta",
+    }
+    filtros = [f"{etiquetas[clave]}: {args.get(clave)}" for clave in etiquetas if args.get(clave)]
+    return f"Generado: {datetime.now().strftime('%Y-%m-%d %H:%M')} | Filtros: {'; '.join(filtros) if filtros else 'Todos'}"
 
 
 @admin_bp.route("/panel", methods=["GET"])
@@ -261,14 +274,38 @@ def exportar_reporte_institucional_admin(formato):
             ("estudiante", "Estudiante"), ("modalidad", "Modalidad"), ("institucion", "Institución"),
             ("docente", "Docente"), ("grado", "Grado"), ("seccion", "Sección"),
             ("asignacion", "Asignación"), ("tema", "Tema"), ("intentos", "Intentos"),
-            ("correctos", "Correctos"), ("incorrectos", "Incorrectos"), ("precision", "Precisión"),
-            ("partidas_completadas", "Partidas"), ("nivel_actual", "Nivel"),
+            ("correctos", "Correctos"), ("incorrectos", "Incorrectos"), ("precision", "Acierto"),
+            ("mejora", "Mejora"), ("partidas_completadas", "Partidas"), ("nivel_actual", "Nivel actual"),
             ("ultima_actividad", "Última actividad"),
         ]
-        archivo = exportar_reporte(formato, "Reporte institucional", columnas, reporte.get("filas", []), "reporte_estudiantes")
+        archivo = exportar_reporte(
+            formato,
+            "Misión Matemática / Reporte global de estudiantes",
+            columnas,
+            reporte.get("filas", []),
+            "reporte_estudiantes",
+            _metadata_reporte_global(request.args),
+        )
         if not archivo:
             return _respuesta("datos_invalidos", "No hay datos para exportar.", None, {})
         contenido, mimetype, nombre = archivo
         return send_file(contenido, mimetype=mimetype, as_attachment=True, download_name=nombre)
     except Error:
         return _error_servidor()
+
+
+@admin_bp.route("/reportes/estudiantes", methods=["GET"])
+@roles_requeridos("administrador")
+def reporte_estudiantes_admin():
+    """Ruta canónica del reporte global; conserva la ruta institucional previa."""
+    try:
+        return _respuesta(*obtener_reporte_institucional_admin(request.args))
+    except Error:
+        return _error_servidor()
+
+
+@admin_bp.route("/reportes/estudiantes/<formato>", methods=["GET"])
+@roles_requeridos("administrador")
+def exportar_reporte_estudiantes_admin(formato):
+    """Exporta el reporte global aplicando los filtros visibles actuales."""
+    return exportar_reporte_institucional_admin("xlsx" if formato == "excel" else formato)

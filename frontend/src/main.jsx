@@ -28,6 +28,7 @@ const PanelEstudiantePage = lazy(() => import("./pages/PanelEstudiantePage"));
 const TiendaPage = lazy(() => import("./pages/TiendaPage"));
 const PlantillasPage = lazy(() => import("./pages/PlantillasPage"));
 const ReportesDocentePage = lazy(() => import("./pages/ReportesDocentePage"));
+const ReportesAdminPage = lazy(() => import("./pages/ReportesAdminPage"));
 const RegisterPage = lazy(() => import("./pages/RegisterPage"));
 const SeccionesPage = lazy(() => import("./pages/SeccionesPage"));
 
@@ -111,7 +112,7 @@ const rutasPrivadas = {
   "/admin/secciones": { componente: SeccionesPage, activeSection: "secciones", roles: ["administrador"] },
   "/admin/grados": { componente: GradosPage, activeSection: "grados", roles: ["administrador"] },
   "/admin/asignaciones": { componente: AsignacionesPage, activeSection: "asignaciones", roles: ["administrador"] },
-  "/admin/reportes": { componente: ReportesDocentePage, activeSection: "reportes", roles: ["administrador"] },
+  "/admin/reportes": { componente: ReportesAdminPage, activeSection: "reportes", roles: ["administrador"] },
   "/admin/plantillas": { componente: PlantillasPage, activeSection: "plantillas", roles: ["administrador"] },
   "/mi-institucion": { componente: MiInstitucionPage, activeSection: "mi-institucion", roles: ["docente"] },
   "/secciones": { componente: SeccionesPage, activeSection: "secciones", roles: ["docente"] },

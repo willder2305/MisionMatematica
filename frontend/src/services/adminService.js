@@ -189,6 +189,19 @@ export const obtenerReporteInstitucionalAdmin = async (filtros = {}) => {
 /** Descarga el reporte institucional aplicando los filtros visibles del administrador. */
 export const exportarReporteInstitucionalAdmin = (formato, filtros = {}) => descargarArchivo(`/admin/reportes/institucional/exportar/${formato}`, filtros);
 
+/** Consulta el reporte global canónico del administrador. */
+export const obtenerReporteEstudiantesAdmin = async (filtros = {}) => {
+  try {
+    const response = await api.get("/admin/reportes/estudiantes", { params: filtros });
+    return extraerDatos(response);
+  } catch (error) {
+    manejarError(error);
+  }
+};
+
+/** Descarga el reporte global con los filtros actualmente aplicados. */
+export const exportarReporteEstudiantesAdmin = (formato, filtros = {}) => descargarArchivo(`/admin/reportes/estudiantes/${formato}`, filtros);
+
 export const actualizarReglaAdmin = async (idRegla, datos) => {
   try {
     const response = await api.put(`/admin/reglas/${idRegla}`, datos);

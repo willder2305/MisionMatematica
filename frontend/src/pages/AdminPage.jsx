@@ -84,7 +84,6 @@ const tabs = [
   { key: "ejercicios", label: "Ejercicios" },
   { key: "reglas", label: "Reglas" },
   { key: "auditoria", label: "Auditoría" },
-  { key: "reportes", label: "Reportes" },
 ];
 
 const formatearPorcentaje = (valor) => `${Number(valor || 0).toFixed(2)}%`;

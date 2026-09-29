@@ -114,6 +114,14 @@ docker compose --env-file .env -f docker-compose.prod.yml ps
 curl -fsS http://127.0.0.1/api/health
 ```
 
+Con MySQL saludable, normalizar el único administrador antes de abrir el sistema a usuarios:
+
+```bash
+docker compose --env-file .env -f docker-compose.prod.yml exec -T backend python scripts/bootstrap_admin.py
+```
+
+Si esta es la primera creación, el comando muestra una contraseña temporal una sola vez en esa terminal. Guardarla en un gestor de contraseñas y cambiarla mediante el flujo seguro de recuperación. Para una rotación explícita, el operador puede ejecutar `python scripts/bootstrap_admin.py --reset-password` dentro del mismo contenedor; el valor no se almacena en el repositorio, variables de entorno ni logs de la aplicación.
+
 Sin certificado Nginx sirve HTTP temporal y `/.well-known/acme-challenge/`; no usa certificados ficticios ni entra en bucles. Cuando DNS y firewall ya funcionen desde Internet, emitir el certificado:
 
 ```bash
@@ -178,6 +186,12 @@ MySQL se inicializa solo si `mysql_data` está vacío. Migraciones históricas n
 ```bash
 mkdir -p /opt/mision-matematica-backups
 docker compose --env-file .env -f docker-compose.prod.yml exec -T db sh -c 'exec mysqldump --default-character-set=utf8mb4 --no-tablespaces -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' > /opt/mision-matematica-backups/mision-matematica-$(date +%F).sql
+```
+
+Aplicar la migración de índices de reportes globales en una base ya existente:
+
+```bash
+docker compose --env-file .env -f docker-compose.prod.yml exec -T db sh -c 'exec mysql --default-character-set=utf8mb4 -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < database/actualizar_reportes_globales.sql
 ```
 
 Restaurar solamente dumps validados y con la aplicación sin escrituras:
