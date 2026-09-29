@@ -79,6 +79,8 @@ const JuegoPage = () => {
   const animacionRef = useRef(null);
   const bloqueoRef = useRef(false);
   const inicioPartidaRef = useRef(false);
+  const contenidoExplicacionRef = useRef(null);
+  const cierreExplicacionRef = useRef(false);
   const gameFullscreenRef = useRef(null);
   const requestInicioRef = useRef("");
   const inicioPreguntaRef = useRef(Date.now());
@@ -94,6 +96,14 @@ const JuegoPage = () => {
     usarPseudoFullscreen,
   } = useGameFullscreen({ activo: juegoActivo, contenedorRef: gameFullscreenRef });
   const orientacionVertical = juegoActivo && esMovil && !esLandscape;
+
+  // Cada retroalimentacion se abre desde el primer paso, no desde el scroll anterior.
+  useEffect(() => {
+    if (explicacionAbierta) {
+      contenidoExplicacionRef.current?.scrollTo({ top: 0, behavior: "auto" });
+    }
+  }, [explicacionAbierta, feedback]);
+
   // El catálogo solo cambia al cargar contexto; no se reagrupa durante cada frame de animación.
   const temasPorCategoria = useMemo(() => temas.reduce((grupos, tema) => {
     const categoria = tema.categoria || "Temas";
@@ -196,6 +206,7 @@ const JuegoPage = () => {
       };
       setFeedback(feedbackNuevo);
       if (!feedbackNuevo.correcta && partidaConfirmada.estado === "en_curso") {
+        cierreExplicacionRef.current = false;
         setExplicacionAbierta(true);
       } else {
         aplicarPregunta(partidaConfirmada.estado === "en_curso" ? resultadoRespuesta.siguiente_pregunta : null);
@@ -418,6 +429,10 @@ const JuegoPage = () => {
   };
 
   const cerrarExplicacion = () => {
+    if (cierreExplicacionRef.current) {
+      return;
+    }
+    cierreExplicacionRef.current = true;
     setExplicacionAbierta(false);
     aplicarPregunta(partida?.estado === "en_curso" ? feedback?.siguientePregunta || null : null);
     setFeedback(null);
@@ -489,16 +504,22 @@ const JuegoPage = () => {
             {mensaje.tipo === "error" && <div className="game-inline-alert">{mensaje.texto}</div>}
             {explicacionAbierta && feedback && (
               <div className="game-explanation-panel" role="dialog" aria-modal="true" aria-labelledby="explicacion-title">
-                <h2 id="explicacion-title">Vamos a revisarlo</h2>
-                <p className="game-correct-answer">Respuesta correcta: <strong>{feedback.respuestaCorrecta}</strong></p>
-                <section className="game-procedure" aria-labelledby="procedure-title">
-                  <h3 id="procedure-title">¿Cómo se resuelve?</h3>
-                  <ol>
-                    {feedback.explicacionPasos.map((paso, indice) => <li key={`${indice}-${paso}`}>{paso}</li>)}
-                  </ol>
-                </section>
-                <span>¡Inténtalo de nuevo en el siguiente reto!</span>
-                <button type="button" className="pixel-primary-button success" onClick={cerrarExplicacion}>Entendido</button>
+                <header className="game-explanation-header">
+                  <h2 id="explicacion-title">Vamos a revisarlo</h2>
+                  <p className="game-correct-answer">Respuesta correcta: <strong>{feedback.respuestaCorrecta}</strong></p>
+                </header>
+                <div className="game-explanation-content" ref={contenidoExplicacionRef} tabIndex="0">
+                  <section className="game-procedure" aria-labelledby="procedure-title">
+                    <h3 id="procedure-title">¿Cómo se resuelve?</h3>
+                    <ol>
+                      {feedback.explicacionPasos.map((paso, indice) => <li key={`${indice}-${paso}`}>{paso}</li>)}
+                    </ol>
+                  </section>
+                  <span>¡Inténtalo de nuevo en el siguiente reto!</span>
+                </div>
+                <footer className="game-explanation-footer">
+                  <button type="button" className="pixel-primary-button success" onClick={cerrarExplicacion} autoFocus>Entendido</button>
+                </footer>
               </div>
             )}
             {orientacionVertical && (

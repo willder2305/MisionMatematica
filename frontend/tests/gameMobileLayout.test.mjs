@@ -26,3 +26,21 @@ test("el modo móvil horizontal usa un HUD compacto sobre la zona decorativa", a
   assert.match(css, /background:\s*rgba\(255, 253, 248, 0\.84\)/);
   assert.doesNotMatch(css, /--game-controls-height/);
 });
+
+test("el modal de explicación conserva cabecera y pie, con scroll solo en su contenido", async () => {
+  const [page, css] = await Promise.all([
+    readFile(pagePath, "utf8"),
+    readFile(stylesPath, "utf8"),
+  ]);
+
+  assert.match(page, /className="game-explanation-header"/);
+  assert.match(page, /className="game-explanation-content" ref=\{contenidoExplicacionRef\}/);
+  assert.match(page, /className="game-explanation-footer"/);
+  assert.match(page, /scrollTo\(\{ top: 0, behavior: "auto" \}\)/);
+  assert.match(page, /onClick=\{cerrarExplicacion\} autoFocus/);
+  assert.match(page, /if \(cierreExplicacionRef\.current\)/);
+  assert.match(css, /\.game-explanation-panel\s*\{[\s\S]*?display:\s*flex;[\s\S]*?flex-direction:\s*column;/);
+  assert.match(css, /\.game-explanation-panel\s*\{[\s\S]*?position:\s*fixed;[\s\S]*?max-height:\s*min\(90dvh, calc\(100dvh - 1rem\)\);/);
+  assert.match(css, /\.game-explanation-content\s*\{[\s\S]*?min-height:\s*0;[\s\S]*?overflow-y:\s*auto;/);
+  assert.match(css, /\.game-explanation-footer\s*\{\s*background:\s*#fffef1;\s*\}/);
+});
