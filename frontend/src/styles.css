@@ -2553,14 +2553,14 @@ body.game-session-active,
     min-width: 82px;
   }
 
-  /* En teléfono horizontal los controles tienen una fila propia y nunca invaden el mapa. */
+  /* HUD compacto: flota debajo del recorrido, sobre la franja decorativa inferior del mapa. */
   .game-fullscreen-container {
-    --game-controls-height: clamp(108px, 28dvh, 124px);
-    grid-template-rows: minmax(0, 1fr) var(--game-controls-height);
-    place-items: stretch;
+    grid-template-rows: minmax(0, 1fr);
+    place-items: center;
   }
 
   .game-fullscreen-container .game-board {
+    height: 100%;
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr);
     grid-row: 1;
@@ -2573,42 +2573,49 @@ body.game-session-active,
   }
 
   .game-bottom-controls {
-    align-items: end;
-    bottom: auto;
+    align-items: center;
+    bottom: max(env(safe-area-inset-bottom), 0.4rem);
     box-sizing: border-box;
-    gap: clamp(0.4rem, 1.2vw, 0.65rem);
+    gap: clamp(0.35rem, 1vw, 0.55rem);
     grid-row: 2;
-    grid-template-rows: minmax(0, 1fr);
-    grid-template-columns: minmax(0, 55vw) clamp(82px, 14vw, 112px);
+    grid-template-columns: minmax(0, 48vw) clamp(76px, 12vw, 104px);
     justify-content: center;
-    left: auto;
+    left: 50%;
     min-height: 0;
-    padding: 0.25rem max(env(safe-area-inset-right), 0.5rem) max(env(safe-area-inset-bottom), 0.4rem) max(env(safe-area-inset-left), 0.5rem);
-    position: static;
+    padding: 0;
+    position: absolute;
     right: auto;
+    transform: translateX(-50%);
+    width: 62vw;
   }
 
   .game-answer-panel {
-    align-self: end;
-    gap: 0.2rem;
+    align-self: center;
+    background: rgba(255, 253, 248, 0.84);
+    backdrop-filter: blur(2px);
+    border-width: 2px;
+    box-shadow: 0 2px 0 rgba(6, 38, 67, 0.24);
+    gap: 0.15rem;
     max-width: none;
     min-width: 0;
-    padding: 0.2rem 0.3rem;
+    padding: clamp(2px, 0.65dvh, 4px) clamp(4px, 0.8vw, 6px);
     width: 100%;
   }
 
   .game-answer-label {
-    font-size: clamp(0.65rem, 1.8vw, 0.8rem);
+    font-size: clamp(0.62rem, 1.55vw, 0.76rem);
+    line-height: 0.95;
   }
 
   .game-page-active .question-option-button {
-    font-size: clamp(0.85rem, 2.4vw, 1.05rem);
-    min-height: clamp(36px, 8.5dvh, 46px);
-    padding: 0.2rem 0.3rem;
+    background: linear-gradient(180deg, rgba(247, 251, 255, 0.98), rgba(217, 236, 251, 0.98));
+    font-size: clamp(1rem, 3.5dvh, 1.3rem);
+    min-height: clamp(34px, 8.5dvh, 44px);
+    padding: 0.15rem 0.3rem;
   }
 
   .game-page-active .question-options {
-    gap: 0.25rem;
+    gap: clamp(3px, 0.7dvh, 5px);
   }
 
   .game-page-active .numeric-question {
@@ -2617,15 +2624,16 @@ body.game-session-active,
   }
 
   .game-page-active .numeric-question input {
-    min-height: clamp(38px, 9dvh, 46px);
-    padding: 0.35rem 0.5rem;
+    min-height: clamp(36px, 8.5dvh, 44px);
+    padding: 0.25rem 0.45rem;
   }
 
   .game-exit-button {
-    align-self: end;
-    min-height: clamp(42px, 10dvh, 52px);
+    align-self: center;
+    box-shadow: 0 3px 0 #7a1717;
+    min-height: clamp(38px, 9dvh, 48px);
     min-width: 0;
-    padding: 0.35rem 0.45rem;
+    padding: 0.25rem 0.4rem;
     width: 100%;
   }
 }

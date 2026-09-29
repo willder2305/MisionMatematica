@@ -16,11 +16,13 @@ test("los controles del juego se renderizan fuera del tablero", async () => {
   assert.match(page, /<\/GameBoard>\s*<GameBottomControls/s);
 });
 
-test("el modo móvil horizontal reserva una fila para los controles", async () => {
+test("el modo móvil horizontal usa un HUD compacto sobre la zona decorativa", async () => {
   const css = await readFile(stylesPath, "utf8");
 
   assert.match(css, /@media \(orientation: landscape\) and \(max-height: 600px\)/);
-  assert.match(css, /--game-controls-height:\s*clamp\(108px, 28dvh, 124px\)/);
-  assert.match(css, /grid-template-rows:\s*minmax\(0, 1fr\) var\(--game-controls-height\)/);
-  assert.match(css, /\.game-bottom-controls\s*\{[\s\S]*?position:\s*static;/);
+  assert.match(css, /grid-template-rows:\s*minmax\(0, 1fr\);/);
+  assert.match(css, /\.game-bottom-controls\s*\{[\s\S]*?position:\s*absolute;/);
+  assert.match(css, /width:\s*62vw;/);
+  assert.match(css, /background:\s*rgba\(255, 253, 248, 0\.84\)/);
+  assert.doesNotMatch(css, /--game-controls-height/);
 });
