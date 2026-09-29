@@ -286,7 +286,8 @@ def _actualizar_estado_personal(partida, es_correcta, tiempo_ms, nivel_recomenda
     evidencia = _evidencia_dificil_personal(partida, cursor) if nivel_actual["codigo"] == "dificil" else {}
     if evaluar_progresion_personal({**actualizado, **evidencia}, nivel_actual, estado["codigo_grado"], evidencia.get("resultados_recientes")) == "promover_grado":
         grado_nuevo = _grado_siguiente(estado["id_grado_curricular"], cursor)
-        tema_nuevo = _tema_equivalente(partida["tema_clave"], grado_nuevo["id_grado"], cursor) if grado_nuevo else None
+        # La partida solo guarda el id del tema; la clave se resolvio al inicio de esta funcion.
+        tema_nuevo = _tema_equivalente(tema_clave, grado_nuevo["id_grado"], cursor) if grado_nuevo else None
         facil = _nivel_inicial(cursor)
         if tema_nuevo and facil:
             siguiente_grado, siguiente_tema, siguiente_nivel = grado_nuevo["id_grado"], tema_nuevo["id_tema"], facil["id_nivel"]

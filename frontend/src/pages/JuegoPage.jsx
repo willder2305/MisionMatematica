@@ -83,6 +83,7 @@ const JuegoPage = () => {
   const cierreExplicacionRef = useRef(false);
   const gameFullscreenRef = useRef(null);
   const requestInicioRef = useRef("");
+  const respuestaPendienteRef = useRef(null);
   const inicioPreguntaRef = useRef(Date.now());
   const posicionVisual = aplicarPosicionVisual(posicionBase, offsetAnimacion);
   const juegoActivo = Boolean(partida) || preparandoPartida;
@@ -349,14 +350,23 @@ const JuegoPage = () => {
 
     try {
       const casillaOrigen = partida.casilla_actual;
+      const clavePregunta = preguntaActual.id_ejercicio_generado || preguntaActual.id_ejercicio;
+      const claveRespuesta = `${clavePregunta}:${String(respuestaEstudiante).trim()}`;
+      if (respuestaPendienteRef.current?.clave !== claveRespuesta) {
+        respuestaPendienteRef.current = {
+          clave: claveRespuesta,
+          requestId: generarRequestId(),
+        };
+      }
       const respuesta = await responderPregunta(partida.id_partida, {
         id_ejercicio: preguntaActual.id_ejercicio || null,
         id_ejercicio_generado: preguntaActual.id_ejercicio_generado || null,
         respuesta: respuestaEstudiante,
-        request_id: generarRequestId(),
+        request_id: respuestaPendienteRef.current.requestId,
         tiempo_respuesta_ms: Date.now() - inicioPreguntaRef.current,
       });
       const resultado = respuesta.data;
+      respuestaPendienteRef.current = null;
       if (resultado.resultado.correcta) {
         reproducirAnimacionAvance(casillaOrigen, resultado.partida, resultado);
       } else {
@@ -364,7 +374,7 @@ const JuegoPage = () => {
       }
     } catch (error) {
       liberarControles();
-      setMensaje({ tipo: "error", texto: "No se pudo procesar la respuesta. Intenta nuevamente." });
+      setMensaje({ tipo: "error", texto: error.message || "No se pudo procesar la respuesta. Intenta nuevamente." });
     }
   };
 
@@ -389,6 +399,7 @@ const JuegoPage = () => {
   // Limpia estado local para volver a la pantalla inicial.
   const reiniciarEstadoLocal = (textoMensaje = "") => {
     cancelarAnimacion();
+    respuestaPendienteRef.current = null;
     setPartida(null);
     aplicarPregunta(null);
     setFeedback(null);

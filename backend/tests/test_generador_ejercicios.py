@@ -35,6 +35,23 @@ class GeneradorEjerciciosTest(unittest.TestCase):
             ejercicio = construir_ejercicio_desde_plantilla(base, seed=seed)
             self.assertEqual(int(ejercicio["respuesta_correcta"]), ejercicio["parametros"]["a"] + ejercicio["parametros"]["b"])
 
+    def test_sumas_mayores_a_int32_se_serializan_sin_perder_precision(self):
+        suma_grande = plantilla("suma", variables={
+            "a": {"tipo": "entero", "min": 1_500_000_000, "max": 1_500_000_000},
+            "b": {"tipo": "entero", "min": 1_200_000_000, "max": 1_200_000_000},
+        })
+        tres_sumandos = plantilla("suma", variables={
+            "a": {"tipo": "entero", "min": 999_999_999, "max": 999_999_999},
+            "b": {"tipo": "entero", "min": 999_999_999, "max": 999_999_999},
+        }, extras={"min_operandos": 3, "max_operandos": 3})
+
+        primero = construir_ejercicio_desde_plantilla(suma_grande, seed=1)
+        segundo = construir_ejercicio_desde_plantilla(tres_sumandos, seed=1)
+
+        self.assertEqual(primero["respuesta_correcta"], "2700000000")
+        self.assertEqual(segundo["respuesta_correcta"], "2999999997")
+        self.assertIn("2700000000", [opcion["texto"] for opcion in primero["opciones"]])
+
     def test_resta_sin_negativos(self):
         base = plantilla("resta", "numerica", variables={
             "a": {"tipo": "entero", "min": 1, "max": 20},

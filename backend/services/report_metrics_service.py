@@ -80,6 +80,7 @@ def obtener_metricas_por_estudiante_tema(
     where_partidas = f" AND ({condicion_partidas})" if condicion_partidas else ""
     parametros_partidas = list(parametros_partidas or [])
 
+    condicion_pares_progreso, parametros_progreso = _condicion_pares(pares, alias_partida="pte")
     cursor.execute(
         f"""
         SELECT p.id_usuario AS id_estudiante, p.id_tema, i.es_correcta
@@ -104,9 +105,9 @@ def obtener_metricas_por_estudiante_tema(
         LEFT JOIN grados g_progreso ON g_progreso.id_grado = pte.id_grado_curricular_actual
         LEFT JOIN grados g_tema ON g_tema.id_grado = t.id_grado
         LEFT JOIN niveles_dificultad nivel ON nivel.id_nivel = pte.id_nivel_actual
-        WHERE ({condicion_pares})
+        WHERE ({condicion_pares_progreso})
         """,
-        tuple(parametros),
+        tuple(parametros_progreso),
     )
     niveles = {
         (fila["id_estudiante"], fila["id_tema"]): " - ".join(

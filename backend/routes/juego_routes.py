@@ -1,4 +1,5 @@
 import logging
+from uuid import uuid4
 
 from flask import Blueprint, jsonify, request
 from mysql.connector import Error
@@ -49,11 +50,16 @@ def _contexto_inicio_log(datos=None):
 #
 # Manejo de errores:
 #   Oculta errores tecnicos de MySQL y evita enviar stack traces al frontend.
-def respuesta_error_servidor():
+def respuesta_error_servidor(error_id=None):
+    """Devuelve un error seguro y una referencia correlacionable en los registros."""
+    errores = {"error_id": error_id} if error_id else {}
+    mensaje = "No se pudo procesar la respuesta. Intenta nuevamente."
+    if error_id:
+        mensaje = f"{mensaje} Referencia: {error_id}."
     return jsonify({
         "success": False,
-        "message": "Ocurrio un error interno al procesar la solicitud.",
-        "errors": {},
+        "message": mensaje,
+        "errors": errores,
     }), 500
 
 
@@ -205,11 +211,21 @@ def consultar_partida(id_partida):
 @juego_bp.route("/partidas/<int:id_partida>/respuesta", methods=["POST"])
 @login_requerido
 def responder_partida(id_partida):
+    datos = {}
     try:
         datos = request.get_json(silent=True) or {}
         return construir_respuesta(*responder_partida_adaptativa(id_partida, datos, usuario_actual()["id_usuario"]))
-    except Error:
-        return respuesta_error_servidor()
+    except Exception:
+        error_id = uuid4().hex
+        contexto = _contexto_inicio_log(datos)
+        logger.exception(
+            "Fallo al procesar respuesta de partida error_id=%s partida=%s usuario=%s request_id=%s",
+            error_id,
+            id_partida,
+            contexto["usuario"],
+            contexto["request_id"],
+        )
+        return respuesta_error_servidor(error_id)
 
 
 @juego_bp.route("/partidas/<int:id_partida>/continuar", methods=["POST"])

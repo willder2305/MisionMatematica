@@ -747,6 +747,8 @@ CREATE TABLE IF NOT EXISTS progreso_tema_estudiante (
     total_intentos INT NOT NULL DEFAULT 0,
     total_aciertos INT NOT NULL DEFAULT 0,
     total_errores INT NOT NULL DEFAULT 0,
+    puntos_acumulados INT UNSIGNED NOT NULL DEFAULT 0,
+    aciertos_puntuados INT UNSIGNED NOT NULL DEFAULT 0,
     porcentaje_aciertos DECIMAL(5,2) NOT NULL DEFAULT 0.00,
     racha_correctas INT NOT NULL DEFAULT 0,
     racha_incorrectas INT NOT NULL DEFAULT 0,
