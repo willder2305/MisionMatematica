@@ -3,7 +3,7 @@ import ResponsiveSelect from "../components/ui/ResponsiveSelect";
 import ExitGameModal from "../components/juego/ExitGameModal";
 import GameBoard from "../components/juego/GameBoard";
 import GameFinishedModal from "../components/juego/GameFinishedModal";
-import QuestionPanel from "../components/juego/QuestionPanel";
+import QuestionPanel, { GameBottomControls } from "../components/juego/QuestionPanel";
 import PixelAlert from "../components/ui/PixelAlert";
 import { MAPA_PREDETERMINADO, obtenerPosicionCasilla } from "../config/mapasConfig";
 import { obtenerPersonajeConfig } from "../config/personajesConfig";
@@ -485,18 +485,6 @@ const JuegoPage = () => {
             <QuestionPanel
               partida={partida}
               pregunta={preguntaActual}
-              disabled={
-                procesando ||
-                animando ||
-                modalSalidaAbierto ||
-                modalFinalAbierto ||
-                explicacionAbierta ||
-                orientacionVertical ||
-                mostrarAvisoSalida ||
-                partida.estado !== "en_curso"
-              }
-              onResponder={manejarRespuesta}
-              onSalir={() => setModalSalidaAbierto(true)}
             />
             {mensaje.tipo === "error" && <div className="game-inline-alert">{mensaje.texto}</div>}
             {explicacionAbierta && feedback && (
@@ -534,6 +522,21 @@ const JuegoPage = () => {
               </div>
             )}
           </GameBoard>
+          <GameBottomControls
+            pregunta={preguntaActual}
+            disabled={
+              procesando ||
+              animando ||
+              modalSalidaAbierto ||
+              modalFinalAbierto ||
+              explicacionAbierta ||
+              orientacionVertical ||
+              mostrarAvisoSalida ||
+              partida.estado !== "en_curso"
+            }
+            onResponder={manejarRespuesta}
+            onSalir={() => setModalSalidaAbierto(true)}
+          />
         </div>
       )}
 

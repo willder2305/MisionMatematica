@@ -3,13 +3,11 @@ import LivesIndicator from "./LivesIndicator";
 import MultipleChoiceQuestion from "./MultipleChoiceQuestion";
 import NumericQuestion from "./NumericQuestion";
 
-// Dibuja el HUD jugable: vidas, pregunta, respuestas y salida.
-const QuestionPanel = ({ partida, pregunta, disabled, onResponder, onSalir }) => {
+// Dibuja solo el HUD superior para que el escenario conserve sus capas propias.
+const QuestionPanel = ({ partida, pregunta }) => {
   if (!partida || !pregunta) {
     return null;
   }
-
-  const questionKey = pregunta.id_ejercicio_generado || pregunta.id_ejercicio || pregunta.enunciado;
 
   return (
     <section className="question-panel">
@@ -23,20 +21,31 @@ const QuestionPanel = ({ partida, pregunta, disabled, onResponder, onSalir }) =>
           <h2>{pregunta.enunciado}</h2>
         </div>
       </div>
+    </section>
+  );
+};
 
-      <div className="game-hud-bottom">
-        <div className="game-answer-panel">
-          <span className="game-answer-label">RESPUESTAS</span>
-          {pregunta.tipo_respuesta === "seleccion_multiple" ? (
-            <MultipleChoiceQuestion opciones={pregunta.opciones} disabled={disabled} onResponder={onResponder} />
-          ) : (
-            <NumericQuestion disabled={disabled} onResponder={onResponder} questionKey={questionKey} />
-          )}
-        </div>
-        <button type="button" className="game-exit-button" onClick={onSalir} disabled={disabled}>
-          Salir
-        </button>
+// Mantiene las respuestas y la salida fuera del tablero en móviles horizontales.
+export const GameBottomControls = ({ pregunta, disabled, onResponder, onSalir }) => {
+  if (!pregunta) {
+    return null;
+  }
+
+  const questionKey = pregunta.id_ejercicio_generado || pregunta.id_ejercicio || pregunta.enunciado;
+
+  return (
+    <section className="game-bottom-controls" aria-label="Controles de la actividad">
+      <div className="game-answer-panel">
+        <span className="game-answer-label">RESPUESTAS</span>
+        {pregunta.tipo_respuesta === "seleccion_multiple" ? (
+          <MultipleChoiceQuestion opciones={pregunta.opciones} disabled={disabled} onResponder={onResponder} />
+        ) : (
+          <NumericQuestion disabled={disabled} onResponder={onResponder} questionKey={questionKey} />
+        )}
       </div>
+      <button type="button" className="game-exit-button" onClick={onSalir} disabled={disabled}>
+        Salir
+      </button>
     </section>
   );
 };

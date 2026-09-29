@@ -1511,6 +1511,7 @@ body.game-session-active,
   height: 100dvh;
   overflow: hidden;
   place-items: center;
+  position: relative;
   width: 100vw;
 }
 
@@ -1548,15 +1549,12 @@ body.game-session-active,
 
 .game-board-inner {
   aspect-ratio: 1983 / 793;
-  height: min(100vh, calc(100vw * 793 / 1983));
-  height: min(100dvh, calc(100vw * 793 / 1983));
+  height: min(100%, calc(100vw * 793 / 1983));
   margin: 0 auto;
-  max-height: 100vh;
-  max-height: 100dvh;
+  max-height: 100%;
   max-width: 100vw;
   position: relative;
-  width: min(100vw, calc(100vh * 1983 / 793));
-  width: min(100vw, calc(100dvh * 1983 / 793));
+  width: auto;
 }
 
 .game-map {
@@ -1765,7 +1763,7 @@ body.game-session-active,
   grid-template-columns: minmax(0, 1fr) auto;
 }
 
-.game-hud-bottom {
+.game-bottom-controls {
   align-items: end;
   bottom: max(env(safe-area-inset-bottom), clamp(0.2rem, 0.7vw, 0.55rem));
   display: grid;
@@ -2489,7 +2487,7 @@ body.game-session-active,
   }
 }
 
-@media (max-width: 900px) and (orientation: landscape) {
+@media (orientation: landscape) and (max-height: 600px) {
   .game-hud-top {
     grid-template-columns: minmax(112px, 0.6fr) minmax(240px, 1.7fr) minmax(72px, 0.4fr);
     left: max(env(safe-area-inset-left), 0.5rem);
@@ -2517,7 +2515,7 @@ body.game-session-active,
     font-size: clamp(0.82rem, 2.45vw, 1.2rem);
   }
 
-  .game-hud-bottom {
+  .game-bottom-controls {
     bottom: max(env(safe-area-inset-bottom), 0.15rem);
     grid-template-columns: minmax(260px, 1fr) auto;
     left: max(env(safe-area-inset-left), 0.65rem);
@@ -2553,6 +2551,82 @@ body.game-session-active,
   .game-exit-button {
     min-height: 44px;
     min-width: 82px;
+  }
+
+  /* En teléfono horizontal los controles tienen una fila propia y nunca invaden el mapa. */
+  .game-fullscreen-container {
+    --game-controls-height: clamp(108px, 28dvh, 124px);
+    grid-template-rows: minmax(0, 1fr) var(--game-controls-height);
+    place-items: stretch;
+  }
+
+  .game-fullscreen-container .game-board {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    grid-row: 1;
+    min-height: 0;
+  }
+
+  .game-fullscreen-container .game-board-inner {
+    height: min(100%, calc(100vw * 793 / 1983));
+    max-width: 100%;
+  }
+
+  .game-bottom-controls {
+    align-items: end;
+    bottom: auto;
+    box-sizing: border-box;
+    gap: clamp(0.4rem, 1.2vw, 0.65rem);
+    grid-row: 2;
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-columns: minmax(0, 55vw) clamp(82px, 14vw, 112px);
+    justify-content: center;
+    left: auto;
+    min-height: 0;
+    padding: 0.25rem max(env(safe-area-inset-right), 0.5rem) max(env(safe-area-inset-bottom), 0.4rem) max(env(safe-area-inset-left), 0.5rem);
+    position: static;
+    right: auto;
+  }
+
+  .game-answer-panel {
+    align-self: end;
+    gap: 0.2rem;
+    max-width: none;
+    min-width: 0;
+    padding: 0.2rem 0.3rem;
+    width: 100%;
+  }
+
+  .game-answer-label {
+    font-size: clamp(0.65rem, 1.8vw, 0.8rem);
+  }
+
+  .game-page-active .question-option-button {
+    font-size: clamp(0.85rem, 2.4vw, 1.05rem);
+    min-height: clamp(36px, 8.5dvh, 46px);
+    padding: 0.2rem 0.3rem;
+  }
+
+  .game-page-active .question-options {
+    gap: 0.25rem;
+  }
+
+  .game-page-active .numeric-question {
+    gap: 0.35rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .game-page-active .numeric-question input {
+    min-height: clamp(38px, 9dvh, 46px);
+    padding: 0.35rem 0.5rem;
+  }
+
+  .game-exit-button {
+    align-self: end;
+    min-height: clamp(42px, 10dvh, 52px);
+    min-width: 0;
+    padding: 0.35rem 0.45rem;
+    width: 100%;
   }
 }
 
