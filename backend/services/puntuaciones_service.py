@@ -94,16 +94,15 @@ def _grupo_canonico_estudiante(id_usuario, cursor):
 
 
 def _puntuacion_usuario(id_usuario, id_tema, cursor):
-    """Consulta la puntuación del usuario actual aun cuando todavía sea cero."""
+    """Suma la puntuación histórica de un tema aunque cambie de grado curricular."""
     cursor.execute(
         """
-        SELECT COALESCE(pte.puntos_acumulados, 0) AS puntos
-        FROM usuarios u
-        LEFT JOIN progreso_tema_estudiante pte
-            ON pte.id_usuario = u.id_usuario
-           AND pte.id_tema = %s
-        WHERE u.id_usuario = %s
-        LIMIT 1
+        SELECT COALESCE(SUM(pte.puntos_acumulados), 0) AS puntos
+        FROM progreso_tema_estudiante pte
+        INNER JOIN temas t ON t.id_tema = pte.id_tema
+        INNER JOIN temas tema_consultado ON tema_consultado.id_tema = %s
+        WHERE pte.id_usuario = %s
+          AND t.nombre_tema = tema_consultado.nombre_tema
         """,
         (id_tema, id_usuario),
     )
@@ -140,7 +139,7 @@ def _consulta_clasificacion(id_tema, grupo, limite, offset, cursor):
         SELECT CONCAT_WS(' ', u.nombres, u.apellidos) AS nombre,
                COALESCE(pref.personaje_key, 'masculino') AS personaje_key,
                t.nombre_tema AS tema,
-               pte.puntos_acumulados AS puntos
+               SUM(pte.puntos_acumulados) AS puntos
         FROM progreso_tema_estudiante pte
         INNER JOIN usuarios u
             ON u.id_usuario = pte.id_usuario
@@ -154,9 +153,11 @@ def _consulta_clasificacion(id_tema, grupo, limite, offset, cursor):
            AND t.estado = 'activo'
         LEFT JOIN preferencias_estudiante pref ON pref.id_usuario = u.id_usuario
         {filtros_grupo}
-        WHERE pte.id_tema = %s
-          AND pte.puntos_acumulados > 0
-        ORDER BY pte.puntos_acumulados DESC, nombre ASC, u.id_usuario ASC
+        INNER JOIN temas tema_consultado ON tema_consultado.id_tema = %s
+        WHERE t.nombre_tema = tema_consultado.nombre_tema
+        GROUP BY u.id_usuario, u.nombres, u.apellidos, pref.personaje_key, t.nombre_tema
+        HAVING SUM(pte.puntos_acumulados) > 0
+        ORDER BY puntos DESC, nombre ASC, u.id_usuario ASC
         LIMIT %s OFFSET %s
         """,
         tuple([*parametros, id_tema, limite, offset]),
@@ -198,7 +199,7 @@ def _total_clasificacion(id_tema, grupo, cursor):
         parametros.extend([grupo["id_institucion"], grupo["id_institucion_grado"], grupo["id_seccion"]])
     cursor.execute(
         f"""
-        SELECT COUNT(*) AS total
+        SELECT COUNT(DISTINCT pte.id_usuario) AS total
         FROM progreso_tema_estudiante pte
         INNER JOIN usuarios u
             ON u.id_usuario = pte.id_usuario
@@ -211,7 +212,8 @@ def _total_clasificacion(id_tema, grupo, cursor):
             ON t.id_tema = pte.id_tema
            AND t.estado = 'activo'
         {filtros_grupo}
-        WHERE pte.id_tema = %s
+        INNER JOIN temas tema_consultado ON tema_consultado.id_tema = %s
+        WHERE t.nombre_tema = tema_consultado.nombre_tema
           AND pte.puntos_acumulados > 0
         """,
         tuple([*parametros, id_tema]),

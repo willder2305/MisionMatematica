@@ -27,6 +27,10 @@ class PuntuacionesServiceTest(unittest.TestCase):
         self.assertEqual(PUNTOS_POR_ACIERTO, 2)
         self.assertEqual(puntos_por_aciertos(1), 2)
         self.assertEqual(puntos_por_aciertos(5), 10)
+        self.assertEqual(puntos_por_aciertos(28), 56)
+        self.assertEqual(puntos_por_aciertos(29), 58)
+        self.assertEqual(puntos_por_aciertos(50), 100)
+        self.assertEqual(puntos_por_aciertos(100), 200)
         self.assertEqual(puntos_por_aciertos(-2), 0)
 
     def test_respuesta_incorrecta_no_ejecuta_acreditacion(self):
@@ -47,6 +51,16 @@ class PuntuacionesServiceTest(unittest.TestCase):
         self.assertIn("ON DUPLICATE KEY UPDATE", consulta)
         self.assertIn("puntos_acumulados", consulta)
         self.assertEqual(parametros, (9, 14, 2))
+
+    def test_clasificacion_acumula_el_mismo_tema_entre_grados(self):
+        cursor = CursorPuntuacionFake()
+
+        _consulta_clasificacion(14, None, 25, 0, cursor)
+
+        consulta, parametros = cursor.consultas[0]
+        self.assertIn("SUM(pte.puntos_acumulados)", consulta)
+        self.assertIn("tema_consultado.nombre_tema", consulta)
+        self.assertEqual(parametros, (14, 25, 0))
 
     def test_tabla_de_grupo_usa_parametros_canonicos_antes_del_tema(self):
         cursor = CursorPuntuacionFake()

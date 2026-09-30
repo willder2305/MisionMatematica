@@ -55,7 +55,7 @@ def serializar_pregunta(ejercicio, opciones):
             "orden_nivel": ejercicio["orden_nivel"],
         },
         "enunciado": ejercicio["enunciado"],
-        "tipo_respuesta": ejercicio["tipo_respuesta"],
+        "tipo_respuesta": ejercicio.get("tipo_respuesta_canonico") or ejercicio["tipo_respuesta"],
         "pista": ejercicio.get("pista"),
         "opciones": opciones,
     }
@@ -71,8 +71,10 @@ def obtener_ejercicio_publicado(id_ejercicio, cursor=None):
     try:
         cursor.execute(
             """
-            SELECT e.*, n.codigo AS codigo_nivel, n.nombre AS nombre_nivel, n.orden_nivel
+            SELECT e.*, t.tipo_respuesta AS tipo_respuesta_canonico,
+                   n.codigo AS codigo_nivel, n.nombre AS nombre_nivel, n.orden_nivel
             FROM ejercicios e
+            INNER JOIN temas t ON t.id_tema = e.id_tema
             INNER JOIN niveles_dificultad n ON n.id_nivel = e.id_nivel
             WHERE e.id_ejercicio = %s
               AND e.estado = 'publicado'
@@ -115,7 +117,8 @@ def preparar_pregunta(id_ejercicio, cursor=None):
     ejercicio = obtener_ejercicio_publicado(id_ejercicio, cursor)
     if not ejercicio:
         return None
-    opciones = obtener_opciones_ejercicio(id_ejercicio, cursor) if ejercicio["tipo_respuesta"] == "seleccion_multiple" else []
+    tipo_respuesta = ejercicio.get("tipo_respuesta_canonico") or ejercicio["tipo_respuesta"]
+    opciones = obtener_opciones_ejercicio(id_ejercicio, cursor) if tipo_respuesta == "seleccion_multiple" else []
     return serializar_pregunta(ejercicio, opciones)
 
 
@@ -141,7 +144,8 @@ def seleccionar_siguiente_ejercicio(id_grado, id_tema, id_nivel, id_partida=None
 
         cursor.execute(
             f"""
-            SELECT e.*, n.codigo AS codigo_nivel, n.nombre AS nombre_nivel, n.orden_nivel
+            SELECT e.*, t.tipo_respuesta AS tipo_respuesta_canonico,
+                   n.codigo AS codigo_nivel, n.nombre AS nombre_nivel, n.orden_nivel
             FROM ejercicios e
             INNER JOIN temas t ON t.id_tema = e.id_tema
             INNER JOIN niveles_dificultad n ON n.id_nivel = e.id_nivel
@@ -160,7 +164,8 @@ def seleccionar_siguiente_ejercicio(id_grado, id_tema, id_nivel, id_partida=None
         if not ejercicio:
             cursor.execute(
                 """
-                SELECT e.*, n.codigo AS codigo_nivel, n.nombre AS nombre_nivel, n.orden_nivel
+                SELECT e.*, t.tipo_respuesta AS tipo_respuesta_canonico,
+                       n.codigo AS codigo_nivel, n.nombre AS nombre_nivel, n.orden_nivel
                 FROM ejercicios e
                 INNER JOIN temas t ON t.id_tema = e.id_tema
                 INNER JOIN niveles_dificultad n ON n.id_nivel = e.id_nivel
@@ -178,7 +183,8 @@ def seleccionar_siguiente_ejercicio(id_grado, id_tema, id_nivel, id_partida=None
         if not ejercicio:
             return None
 
-        opciones = obtener_opciones_ejercicio(ejercicio["id_ejercicio"], cursor) if ejercicio["tipo_respuesta"] == "seleccion_multiple" else []
+        tipo_respuesta = ejercicio.get("tipo_respuesta_canonico") or ejercicio["tipo_respuesta"]
+        opciones = obtener_opciones_ejercicio(ejercicio["id_ejercicio"], cursor) if tipo_respuesta == "seleccion_multiple" else []
         return serializar_pregunta(ejercicio, opciones)
     finally:
         if cerrar:

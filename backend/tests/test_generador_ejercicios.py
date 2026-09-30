@@ -86,6 +86,12 @@ class GeneradorEjerciciosTest(unittest.TestCase):
             self.assertEqual(len(set(textos)), 4)
             self.assertIn(ejercicio["respuesta_correcta"], textos)
 
+    def test_respuesta_escrita_no_genera_distractores(self):
+        ejercicio = construir_ejercicio_desde_plantilla(plantilla("suma", tipo_respuesta="numerica"), seed=1234)
+
+        self.assertEqual(ejercicio["tipo_respuesta"], "numerica")
+        self.assertEqual(ejercicio["opciones"], [])
+
     def test_no_repite_parametros_si_hay_alternativas(self):
         base = plantilla("multiplicacion")
         primero = construir_ejercicio_desde_plantilla(base, seed=7)

@@ -1,6 +1,6 @@
 import React, { useEffect, useId, useRef, useState } from "react";
 
-// Captura una respuesta numerica y la envia al backend.
+// Captura una respuesta escrita y la envia como texto para que el backend la normalice.
 const NumericQuestion = ({ disabled, onResponder, questionKey }) => {
   const [respuesta, setRespuesta] = useState("");
   const inputId = useId();
@@ -35,14 +35,13 @@ const NumericQuestion = ({ disabled, onResponder, questionKey }) => {
   return (
     <form className="numeric-question" onSubmit={enviar}>
       <label className="visually-hidden" htmlFor={inputId}>
-        Respuesta numerica
+        Respuesta numérica
       </label>
       <input
         ref={inputRef}
         id={inputId}
         type="text"
-        inputMode="numeric"
-        pattern="[0-9]*"
+        inputMode="decimal"
         value={respuesta}
         onChange={(evento) => setRespuesta(evento.target.value)}
         placeholder="Escribe tu respuesta"

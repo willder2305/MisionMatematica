@@ -17,8 +17,10 @@ def _serializar_plantilla(fila):
     # Prepara una plantilla para API y generador.
     if not fila:
         return None
+    tipo_canonico = fila.get("tipo_respuesta_canonico") or fila["tipo_respuesta"]
     return {
         **fila,
+        "tipo_respuesta": tipo_canonico,
         "configuracion_json": _parse_json(fila.get("configuracion_json")),
         "fecha_creacion": fila["fecha_creacion"].strftime("%Y-%m-%d %H:%M:%S") if fila.get("fecha_creacion") else None,
         "fecha_modificacion": fila["fecha_modificacion"].strftime("%Y-%m-%d %H:%M:%S") if fila.get("fecha_modificacion") else None,
@@ -304,8 +306,9 @@ def obtener_plantillas_publicadas(id_grado, id_tema, id_nivel, cursor):
     # Lista plantillas publicadas compatibles para intentar fallback entre moldes.
     cursor.execute(
         """
-        SELECT p.*
+        SELECT p.*, t.tipo_respuesta AS tipo_respuesta_canonico
         FROM plantillas_ejercicios p
+        INNER JOIN temas t ON t.id_tema = p.id_tema
         WHERE p.id_grado = %s
           AND p.id_tema = %s
           AND p.id_nivel = %s

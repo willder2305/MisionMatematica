@@ -450,6 +450,7 @@ CREATE TABLE IF NOT EXISTS temas (
     nombre_tema VARCHAR(120) NOT NULL,
     descripcion VARCHAR(255) NULL,
     estado ENUM('activo', 'inactivo') NOT NULL DEFAULT 'activo',
+    tipo_respuesta ENUM('seleccion_multiple', 'numerica') NOT NULL DEFAULT 'numerica',
     fecha_creacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_modificacion TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
 
@@ -1045,3 +1046,4 @@ SOURCE database/actualizar_dificultad_facil.sql;
 SOURCE database/actualizar_generacion_ortografia_y_progresion.sql;
 SOURCE database/optimizar_indices_y_seed_qa.sql;
 SOURCE database/actualizar_puntuaciones_clasificacion.sql;
+SOURCE database/actualizar_tipo_respuesta_temas.sql;
