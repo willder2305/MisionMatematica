@@ -9,4 +9,5 @@ scripts/*
 !scripts/__init__.py
 !scripts/bootstrap_admin.py
 !scripts/corregir_mojibake_utf8.py
+!scripts/reconciliar_puntuaciones_tema.py
 uploads/
