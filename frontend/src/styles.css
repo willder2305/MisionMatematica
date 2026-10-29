@@ -670,6 +670,225 @@ textarea:focus-visible {
   font-weight: 900;
 }
 
+.login-help-button {
+  align-items: center;
+  background: var(--mm-yellow-500);
+  border: 3px solid var(--mm-navy-900);
+  border-radius: 8px;
+  bottom: clamp(1rem, 3vw, 2.2rem);
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.2), 0 5px 0 rgba(6, 38, 67, 0.38);
+  color: var(--mm-navy-950);
+  cursor: pointer;
+  display: inline-flex;
+  font-family: "Arial Black", Arial, Helvetica, sans-serif;
+  font-size: 0.95rem;
+  font-weight: 900;
+  gap: 0.45rem;
+  min-height: 48px;
+  padding: 0.55rem 0.85rem;
+  position: fixed;
+  right: clamp(1rem, 3vw, 2.2rem);
+  transition: filter 120ms ease, transform 120ms ease;
+  z-index: 3;
+}
+
+.login-help-button:hover {
+  filter: brightness(1.07);
+  transform: translateY(-2px);
+}
+
+.login-help-button:active {
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.2), 0 2px 0 rgba(6, 38, 67, 0.38);
+  transform: translateY(3px);
+}
+
+.login-help-button span {
+  align-items: center;
+  background: var(--mm-white);
+  border: 2px solid var(--mm-navy-900);
+  border-radius: 50%;
+  display: inline-flex;
+  height: 23px;
+  justify-content: center;
+  line-height: 1;
+  width: 23px;
+}
+
+.help-page {
+  background: linear-gradient(180deg, #e8f7ff 0, #f3f8fc 36%, #fffaf0 100%);
+  min-height: 100dvh;
+  padding: clamp(1rem, 3vw, 2.5rem);
+}
+
+.help-header,
+.help-intro,
+.help-tutorials,
+.help-manual {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 1180px;
+}
+
+.help-header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: clamp(1.5rem, 3vw, 2.5rem);
+  min-height: 68px;
+}
+
+.help-logo {
+  height: auto;
+  max-width: min(210px, 45vw);
+}
+
+.help-home-link,
+.help-download-button {
+  align-items: center;
+  background: var(--mm-white);
+  border: 3px solid var(--mm-blue-800);
+  border-radius: 8px;
+  box-shadow: inset 0 -4px 0 rgba(7, 89, 156, 0.12), 0 4px 0 rgba(6, 38, 67, 0.28);
+  color: var(--mm-blue-800);
+  cursor: pointer;
+  display: inline-flex;
+  font-family: "Arial Black", Arial, Helvetica, sans-serif;
+  font-weight: 900;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0.55rem 0.9rem;
+  text-align: center;
+  text-decoration: none;
+  transition: filter 120ms ease, transform 120ms ease;
+}
+
+.help-home-link:hover,
+.help-download-button:hover {
+  filter: brightness(1.05);
+  transform: translateY(-2px);
+}
+
+.help-intro {
+  color: var(--mm-navy-950);
+  margin-bottom: clamp(1.5rem, 3vw, 2.5rem);
+  text-align: center;
+}
+
+.help-eyebrow {
+  color: var(--mm-blue-800);
+  font-family: "Arial Black", Arial, Helvetica, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  margin: 0 0 0.55rem;
+  text-transform: uppercase;
+}
+
+.help-intro h1,
+.help-tutorial-card h2,
+.help-manual h2 {
+  font-family: "Arial Black", Arial, Helvetica, sans-serif;
+  letter-spacing: 0;
+}
+
+.help-intro h1 {
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  line-height: 1.08;
+  margin: 0;
+}
+
+.help-intro > p:last-child {
+  color: var(--mm-muted);
+  font-size: clamp(1rem, 2vw, 1.2rem);
+  font-weight: 800;
+  line-height: 1.55;
+  margin: 0.8rem auto 0;
+  max-width: 680px;
+}
+
+.help-tutorials {
+  display: grid;
+  gap: clamp(1rem, 2vw, 1.5rem);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.help-tutorial-card,
+.help-manual {
+  background: rgba(255, 255, 255, 0.94);
+  border: 3px solid #72b6e5;
+  border-radius: 10px;
+  box-shadow: 0 6px 0 rgba(7, 89, 156, 0.18);
+}
+
+.help-tutorial-card {
+  display: grid;
+  gap: 1rem;
+  padding: clamp(1rem, 2vw, 1.35rem);
+}
+
+.help-card-content h2,
+.help-manual h2 {
+  color: var(--mm-navy-950);
+  font-size: clamp(1.25rem, 2.4vw, 1.65rem);
+  margin: 0;
+}
+
+.help-card-content p,
+.help-manual p,
+.help-video-alternative {
+  color: var(--mm-muted);
+  font-weight: 700;
+  line-height: 1.5;
+  margin: 0.55rem 0 0;
+}
+
+.help-video-frame {
+  aspect-ratio: 16 / 9;
+  background: var(--mm-navy-950);
+  border: 3px solid var(--mm-navy-900);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.help-video-frame iframe {
+  border: 0;
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+.help-video-alternative {
+  font-size: 0.92rem;
+  margin: 0;
+}
+
+.help-video-alternative a {
+  color: var(--mm-blue-800);
+  font-weight: 900;
+}
+
+.help-manual {
+  align-items: center;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-top: clamp(1.25rem, 3vw, 2rem);
+  padding: clamp(1rem, 2vw, 1.5rem);
+}
+
+.help-download-button {
+  align-self: center;
+  background: var(--mm-green-600);
+  border-color: var(--mm-green-700);
+  color: var(--mm-white);
+  gap: 0.5rem;
+}
+
+.help-download-button span {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
 @keyframes loginFloat {
   0%, 100% { opacity: 0.35; transform: translate3d(0, 0, 0) rotate(0deg); }
   50% { opacity: 0.78; transform: translate3d(0, -18px, 0) rotate(4deg); }
@@ -2393,6 +2612,32 @@ body.game-session-active,
 
   .login-symbol {
     font-size: clamp(1.1rem, 8vw, 2rem);
+  }
+
+  .login-help-button {
+    bottom: auto;
+    justify-self: end;
+    margin-top: 0.2rem;
+    position: relative;
+    right: auto;
+  }
+
+  .help-page {
+    padding: 1rem;
+  }
+
+  .help-header {
+    margin-bottom: 1.25rem;
+  }
+
+  .help-tutorials,
+  .help-manual {
+    grid-template-columns: 1fr;
+  }
+
+  .help-download-button {
+    justify-self: stretch;
+    width: 100%;
   }
 
   .page {

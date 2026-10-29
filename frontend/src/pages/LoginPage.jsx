@@ -69,6 +69,11 @@ const LoginPage = () => {
     }
   };
 
+  const abrirAyuda = () => {
+    // La ruta pública se abre en otra pestaña sin tocar el formulario ni la sesión actual.
+    window.open("/ayuda", "_blank", "noopener,noreferrer");
+  };
+
   return (
     <main className="auth-page login-page">
       <div className="login-symbols" aria-hidden="true">
@@ -169,6 +174,10 @@ const LoginPage = () => {
           <button type="button" onClick={() => setRecuperacionAbierta(false)}>Entendido</button>
         </div>
       </ResponsiveModal>
+      <button type="button" className="login-help-button" onClick={abrirAyuda} aria-label="Abrir el centro de ayuda en una nueva pestaña">
+        <span aria-hidden="true">?</span>
+        Ayuda
+      </button>
     </main>
   );
 };
