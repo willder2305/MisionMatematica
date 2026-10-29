@@ -18,6 +18,7 @@ const ActividadesPage = lazy(() => import("./pages/ActividadesPage"));
 const ActualizarGradoPage = lazy(() => import("./pages/ActualizarGradoPage"));
 const AsignacionesPage = lazy(() => import("./pages/AsignacionesPage"));
 const GradosPage = lazy(() => import("./pages/GradosPage"));
+const HelpPage = lazy(() => import("./pages/HelpPage"));
 const JuegoPage = lazy(() => import("./pages/JuegoPage"));
 const MiPersonajePage = lazy(() => import("./pages/MiPersonajePage"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
@@ -35,6 +36,7 @@ const SeccionesPage = lazy(() => import("./pages/SeccionesPage"));
 
 export const RUTAS_PRINCIPALES = [
   "/login",
+  "/ayuda",
   "/registro",
   "/recuperar-password",
   "/onboarding",
@@ -67,7 +69,7 @@ const RUTA_POR_ROL = {
   administrador: "/admin",
 };
 
-const RUTAS_PUBLICAS = new Set(["/", "/login", "/registro", "/recuperar-password"]);
+const RUTAS_PUBLICAS = new Set(["/", "/login", "/ayuda", "/registro", "/recuperar-password"]);
 
 const normalizarRol = (rol) => {
   const valor = String(rol || "").trim().toLowerCase();
@@ -270,6 +272,14 @@ const App = () => {
   }
 
   if (RUTAS_PUBLICAS.has(rutaActual)) {
+    // La ayuda se consulta sin alterar una sesión existente.
+    if (rutaActual === "/ayuda") {
+      return (
+        <Suspense fallback={fallbackModulo}>
+          <HelpPage />
+        </Suspense>
+      );
+    }
     if (usuario) {
       redirigir(rutaInicialPorUsuario(usuario));
       return fallbackModulo;
